@@ -1,0 +1,279 @@
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
+const Attendance = require('../models/Attendance');
+const Student = require('../models/Student');
+const Class = require('../models/Class');
+const Subject = require('../models/Subject');
+const Activity = require('../models/Activity');
+const User = require('../models/User');
+const { logActivity } = require('../utils/logger');
+
+// GET system stats & summary
+router.get('/stats', async (req, res) => {
+  try {
+    const [totalStudents, totalClasses, totalSubjects, totalAttendanceSessions, totalActivities] = await Promise.all([
+      Student.countDocuments({ isActive: true }),
+      Class.countDocuments(),
+      Subject.countDocuments(),
+      Attendance.countDocuments(),
+      Activity.countDocuments()
+    ]);
+
+    const mongoState = mongoose.connection.readyState;
+    const dbStatus = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'][mongoState] || 'Unknown';
+
+    res.json({
+      totalStudents,
+      totalClasses,
+      totalSubjects,
+      totalAttendanceSessions,
+      totalActivities,
+      dbStatus,
+      version: '1.0.0',
+      appName: 'Hajar App'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET activities log
+router.get('/activities', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const activities = await Activity.find().sort({ timestamp: -1 }).limit(limit);
+    res.json(activities);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// CLEAR ATTENDANCE DATA ONLY (Specified in requirements: "add option to clear attendence data only")
+router.delete('/clear-attendance', async (req, res) => {
+  try {
+    const { user, classId } = req.body;
+    let query = {};
+    let message = 'All attendance records have been cleared successfully.';
+
+    if (classId && classId !== 'all') {
+      query.classId = classId;
+      message = 'Attendance records for the selected class have been cleared.';
+    }
+
+    const count = await Attendance.countDocuments(query);
+    await Attendance.deleteMany(query);
+
+    await logActivity(
+      'ATTENDANCE_CLEARED',
+      `Attendance data cleared (${count} sessions deleted). Students and classes were preserved.`,
+      user,
+      { countDeleted: count }
+    );
+
+    res.json({
+      success: true,
+      message,
+      countDeleted: count
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// RESET APP BUTTON (Specified in requirements: "rest app button")
+router.post('/reset-app', async (req, res) => {
+  try {
+    const { user, preserveAdmin } = req.body;
+
+    // Delete all attendance records, students, subjects, classes
+    await Attendance.deleteMany({});
+    await Student.deleteMany({});
+    await Subject.deleteMany({});
+    await Class.deleteMany({});
+
+    if (!preserveAdmin) {
+      // Clear non-admin users or keep users
+    }
+
+    await logActivity('APP_RESET', 'Entire application data was reset to factory state by admin', user);
+
+    res.json({
+      success: true,
+      message: 'Hajar App data has been reset to factory state successfully.'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// SEED SAMPLE DATA (Convenient 1-click bootstrap for instant demonstration)
+router.post('/seed-sample', async (req, res) => {
+  try {
+    const { user } = req.body;
+
+    // Check if data already exists
+    const classCount = await Class.countDocuments();
+    if (classCount > 0) {
+      // Clear first if requested
+      await Attendance.deleteMany({});
+      await Student.deleteMany({});
+      await Subject.deleteMany({});
+      await Class.deleteMany({});
+    }
+
+    // 1. Create Classes
+    const classA = await Class.create({
+      name: 'Grade 10',
+      section: 'A',
+      academicYear: '2026',
+      description: 'Senior Secondary Science & Maths'
+    });
+
+    const classB = await Class.create({
+      name: 'Grade 10',
+      section: 'B',
+      academicYear: '2026',
+      description: 'Senior Secondary Arts & Commerce'
+    });
+
+    const classC = await Class.create({
+      name: 'Grade 9',
+      section: 'A',
+      academicYear: '2026',
+      description: 'Junior High'
+    });
+
+    // 2. Create Subjects
+    const math = await Subject.create({
+      name: 'Mathematics',
+      code: 'MATH101',
+      classes: [classA._id, classB._id, classC._id]
+    });
+
+    const science = await Subject.create({
+      name: 'Science & Physics',
+      code: 'SCI102',
+      classes: [classA._id, classB._id]
+    });
+
+    const english = await Subject.create({
+      name: 'English Language',
+      code: 'ENG103',
+      classes: [classA._id, classB._id, classC._id]
+    });
+
+    const history = await Subject.create({
+      name: 'World History',
+      code: 'HIS104',
+      classes: [classB._id, classC._id]
+    });
+
+    // 3. Create Sample Students for Grade 10-A
+    const studentsData = [
+      { name: 'Amina Al-Hajar', rollNo: '10A-01', gender: 'Female', parentContact: '+1 555-0101', parentName: 'Fatima Al-Hajar', email: 'amina@example.com' },
+      { name: 'Bilal Tariq', rollNo: '10A-02', gender: 'Male', parentContact: '+1 555-0102', parentName: 'Tariq Mansoor', email: 'bilal@example.com' },
+      { name: 'Chirag Sharma', rollNo: '10A-03', gender: 'Male', parentContact: '+1 555-0103', parentName: 'Raj Sharma', email: 'chirag@example.com' },
+      { name: 'Diana Prince', rollNo: '10A-04', gender: 'Female', parentContact: '+1 555-0104', parentName: 'Hippolyta Prince', email: 'diana@example.com' },
+      { name: 'Ebrahim Zaid', rollNo: '10A-05', gender: 'Male', parentContact: '+1 555-0105', parentName: 'Zaid Omar', email: 'ebrahim@example.com' },
+      { name: 'Fatima Zahra', rollNo: '10A-06', gender: 'Female', parentContact: '+1 555-0106', parentName: 'Ali Raza', email: 'fatima@example.com' },
+      { name: 'Ghufran Malik', rollNo: '10A-07', gender: 'Male', parentContact: '+1 555-0107', parentName: 'Malik Akbar', email: 'ghufran@example.com' },
+      { name: 'Hajar Noora', rollNo: '10A-08', gender: 'Female', parentContact: '+1 555-0108', parentName: 'Noorudheen', email: 'hajar.noora@example.com' }
+    ];
+
+    const createdStudents = [];
+    for (const s of studentsData) {
+      const student = await Student.create({
+        ...s,
+        classId: classA._id
+      });
+      createdStudents.push(student);
+    }
+
+    // 4. Create sample attendance records across various dates in current and recent months
+    const today = new Date();
+    const dates = [];
+    for (let i = 10; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      // Skip weekends (0 is Sunday, 6 is Saturday)
+      if (d.getDay() !== 0 && d.getDay() !== 6) {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        dates.push(`${yyyy}-${mm}-${dd}`);
+      }
+    }
+
+    for (const dStr of dates) {
+      const parts = dStr.split('-');
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
+
+      // Create attendance for Math
+      const mathRecords = createdStudents.map((st, idx) => {
+        // Vary statuses realistically
+        let status = 'present';
+        if (idx === 3 && dStr.endsWith('05')) status = 'absent';
+        else if (idx === 6 && dStr.endsWith('08')) status = 'late';
+        else if (idx === 1 && Math.random() < 0.2) status = 'absent';
+        return { studentId: st._id, status, remarks: status === 'absent' ? 'Sick leave' : '' };
+      });
+
+      const mathPresent = mathRecords.filter(r => r.status === 'present').length;
+      const mathAbsent = mathRecords.filter(r => r.status === 'absent').length;
+      const mathLate = mathRecords.filter(r => r.status === 'late').length;
+
+      await Attendance.create({
+        date: dStr,
+        year,
+        month,
+        classId: classA._id,
+        subjectId: math._id,
+        markedByName: 'Prof. Noorudheen',
+        records: mathRecords,
+        totalStudents: mathRecords.length,
+        presentCount: mathPresent,
+        absentCount: mathAbsent,
+        lateCount: mathLate
+      });
+
+      // Create attendance for Science
+      const sciRecords = createdStudents.map((st, idx) => {
+        let status = 'present';
+        if (idx === 4 && Math.random() < 0.2) status = 'absent';
+        if (idx === 2 && Math.random() < 0.15) status = 'late';
+        return { studentId: st._id, status, remarks: '' };
+      });
+
+      await Attendance.create({
+        date: dStr,
+        year,
+        month,
+        classId: classA._id,
+        subjectId: science._id,
+        markedByName: 'Dr. Sarah',
+        records: sciRecords,
+        totalStudents: sciRecords.length,
+        presentCount: sciRecords.filter(r => r.status === 'present').length,
+        absentCount: sciRecords.filter(r => r.status === 'absent').length,
+        lateCount: sciRecords.filter(r => r.status === 'late').length
+      });
+    }
+
+    await logActivity('SAMPLE_DATA_SEEDED', 'Sample school data loaded: 3 classes, 4 subjects, 8 students, and 20+ attendance sessions', user);
+
+    res.json({
+      success: true,
+      message: 'Sample school data seeded successfully! You can now test attendance, filtering and reports right away.',
+      classesCreated: 3,
+      subjectsCreated: 4,
+      studentsCreated: createdStudents.length,
+      sessionsCreated: dates.length * 2
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;

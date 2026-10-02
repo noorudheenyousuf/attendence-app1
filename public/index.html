@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Hajar App - School Management & Student Attendance</title>
+  
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0d9488">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hajar App">
+  <link rel="icon" type="image/svg+xml" href="./assets/icons/icon.svg">
+  <link rel="apple-touch-icon" href="./assets/icons/icon.svg">
+
+  <!-- Google Identity Services for Google Authentication -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand-wrapper" onclick="switchTab('attendance')">
+      <img src="/assets/icons/icon.svg" alt="Hajar App Logo" class="app-logo">
+      <div class="brand-title-group">
+        <h1>Hajar App</h1>
+        <span class="brand-tag">School Management</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Offline Indicator Chip -->
+      <div id="offline-chip" class="offline-chip">
+        <span>⚠️</span> Offline
+      </div>
+
+      <!-- Theme Switcher (Light / Dark) -->
+      <button id="btn-theme-toggle" class="btn-icon" title="Toggle Light/Dark Theme" aria-label="Toggle theme">
+        <span id="theme-toggle-icon">☀️</span>
+      </button>
+
+      <!-- User Profile Badge & Role -->
+      <div id="user-profile-badge" class="user-badge" title="Account & Roles">
+        <img id="header-user-avatar" class="user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=admin" alt="Avatar">
+        <div class="user-info-text">
+          <span id="header-user-name" class="user-name">Admin</span>
+          <span id="header-user-role" class="role-pill admin">ADMIN</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- PWA Install Banner -->
+  <div id="pwa-install-banner" style="display:none; background:linear-gradient(90deg, #0d9488, #4f46e5); color:white; padding:0.6rem 1rem; align-items:center; justify-content:space-between; font-size:0.85rem;">
+    <span>📲 Install <b>Hajar App</b> on your device for instant offline access</span>
+    <button id="btn-pwa-install" class="btn btn-sm" style="background:white; color:#0f172a;">Install</button>
+  </div>
+
+  <!-- Top Navigation Bar: Attendance, Report, Settings (Specified in requirements!) -->
+  <nav class="top-nav" aria-label="Primary Top Navigation">
+    <button class="top-nav-btn active" data-tab="attendance">
+      <span class="icon">📋</span> Attendance
+    </button>
+    <button class="top-nav-btn" data-tab="reports">
+      <span class="icon">📊</span> Reports
+    </button>
+    <button class="top-nav-btn" data-tab="settings">
+      <span class="icon">⚙️</span> Settings
+    </button>
+  </nav>
+
+  <!-- Main Application Body -->
+  <main class="app-main">
+
+    <!-- ==========================================
+         VIEW 1: ATTENDANCE (Take & Update)
+         ========================================== -->
+    <section id="view-attendance" class="app-view active">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span>📋</span> Take & Update Attendance</h2>
+          <span class="section-subtitle">Record daily attendance or update past sessions</span>
+        </div>
+      </div>
+
+      <!-- Controls: Date, Class, Subject -->
+      <div class="attendance-picker-card">
+        <div class="form-grid">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="att-date">Session Date</label>
+            <input type="date" id="att-date" class="form-control">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="att-class-select">Select Class</label>
+            <select id="att-class-select" class="form-control"></select>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="att-subject-select">Select Subject</label>
+            <select id="att-subject-select" class="form-control"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dynamic Session Status Banner -->
+      <div id="session-status-banner" class="session-status-banner new">
+        <div><strong>✨ Ready:</strong> Select parameters above to load session.</div>
+      </div>
+
+      <!-- Quick Tally Counter Bar -->
+      <div class="attendance-tally-bar">
+        <div class="tally-card">
+          <div id="tally-total" class="count">0</div>
+          <div class="label">Total</div>
+        </div>
+        <div class="tally-card present">
+          <div id="tally-present" class="count">0</div>
+          <div class="label">Present</div>
+        </div>
+        <div class="tally-card absent">
+          <div id="tally-absent" class="count">0</div>
+          <div class="label">Absent</div>
+        </div>
+        <div class="tally-card late">
+          <div id="tally-late" class="count">0</div>
+          <div class="label">Late</div>
+        </div>
+        <div class="tally-card rate">
+          <div id="tally-rate" class="count">0%</div>
+          <div class="label">Rate</div>
+        </div>
+      </div>
+
+      <!-- Bulk Actions Bar -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+        <span style="font-size:0.85rem; color:var(--text-muted);">Mark Attendance per Student:</span>
+        <div style="display:flex; gap:0.4rem;">
+          <button id="btn-mark-all-present" class="btn btn-sm btn-secondary" style="border-color:var(--success); color:var(--success);">
+            ✔ All Present
+          </button>
+          <button id="btn-mark-all-absent" class="btn btn-sm btn-secondary" style="border-color:var(--danger); color:var(--danger);">
+            ✖ All Absent
+          </button>
+        </div>
+      </div>
+
+      <!-- Student Attendance Roll Call List -->
+      <div id="attendance-students-container">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Sticky Save / Update Attendance Bar -->
+      <div class="sticky-save-bar">
+        <div style="font-size:0.85rem;">
+          Tap <b>Save</b> once finished checking students.
+        </div>
+        <button id="btn-save-attendance" class="btn btn-primary">
+          <span>💾</span> Save Attendance
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ==========================================
+         VIEW 2: REPORTS (Multi-subject, Years, Months)
+         ========================================== -->
+    <section id="view-reports" class="app-view">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span>📊</span> Student Attendance Reports</h2>
+          <span class="section-subtitle">Multi-dimensional analytics across subjects, academic years, and months</span>
+        </div>
+        <div style="display:flex; gap:0.4rem;">
+          <button id="btn-export-csv" class="btn btn-secondary btn-sm" title="Export as CSV spreadsheet">
+            📥 Export CSV
+          </button>
+          <button id="btn-print-report" class="btn btn-secondary btn-sm" title="Print report or save as PDF">
+            🖨️ Print
+          </button>
+        </div>
+      </div>
+
+      <!-- Multi-Dimensional Filter Controls (As requested!) -->
+      <div class="report-filters-card">
+        <div class="form-grid">
+          <!-- Class Filter -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="rep-class-select">1. Class</label>
+            <select id="rep-class-select" class="form-control"></select>
+          </div>
+
+          <!-- Subject Filter: All Subjects or Specific Subject -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="rep-subject-select">2. Subject</label>
+            <select id="rep-subject-select" class="form-control">
+              <option value="all">All Subjects (Combined)</option>
+            </select>
+          </div>
+
+          <!-- Year Filter: All Years or Specific Year -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="rep-year-select">3. Academic Year</label>
+            <select id="rep-year-select" class="form-control">
+              <option value="all">All Years</option>
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+            </select>
+          </div>
+
+          <!-- Month Filter: All Months or Specific Month -->
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="rep-month-select">4. Month</label>
+            <select id="rep-month-select" class="form-control">
+              <option value="all">All Months (Full Year)</option>
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports Output Container -->
+      <div id="reports-content-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+
+    <!-- ==========================================
+         VIEW 3: STUDENTS MANAGEMENT
+         ========================================== -->
+    <section id="view-students" class="app-view">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span>👨‍🎓</span> Students Information</h2>
+          <span class="section-subtitle">Manage student enrollment, roll numbers, and parent contacts</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-student')">
+          + Add Student
+        </button>
+      </div>
+
+      <!-- Filter & Search Bar -->
+      <div class="card" style="padding:0.75rem; margin-bottom:1rem;">
+        <div class="form-grid">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Filter by Class</label>
+            <select id="student-class-filter" class="form-control">
+              <option value="all">All Classes</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Search Students</label>
+            <input type="text" id="student-search-input" class="form-control" placeholder="Search by name, roll no, phone...">
+          </div>
+        </div>
+      </div>
+
+      <!-- Students List Container -->
+      <div id="students-list-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+
+    <!-- ==========================================
+         VIEW 4: CLASSES MANAGEMENT
+         ========================================== -->
+    <section id="view-classes" class="app-view">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span>🏫</span> Classes & Sections</h2>
+          <span class="section-subtitle">Manage classrooms, grades, sections, and academic batches</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-class')">
+          + Add Class
+        </button>
+      </div>
+
+      <div id="classes-list-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+
+    <!-- ==========================================
+         VIEW 5: SUBJECTS MANAGEMENT
+         ========================================== -->
+    <section id="view-subjects" class="app-view">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span>📚</span> Curriculum Subjects</h2>
+          <span class="section-subtitle">Configure school subjects and map them to classes</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-subject')">
+          + Add Subject
+        </button>
+      </div>
+
+      <div id="subjects-list-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+
+    <!-- ==========================================
+         VIEW 6: SETTINGS (Roles, Activities, Reset)
+         ========================================== -->
+    <section id="view-settings" class="app-view">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span>⚙️</span> System Settings & Controls</h2>
+          <span class="section-subtitle">Manage themes, user experience, activity logs, and data operations</span>
+        </div>
+      </div>
+
+      <!-- User Experience & Google Authentication -->
+      <div class="card">
+        <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.75rem;">👤 User Experience & Authentication</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+          Admin role has overarching controls; all teachers can use the complete attendance, report, student, class, and subject features.
+        </p>
+
+        <!-- Instant Switcher Demo -->
+        <div style="background:var(--bg-input); padding:0.9rem; border-radius:var(--radius-md); border:1px solid var(--border-color); margin-bottom:1rem;">
+          <span class="form-label">Multi-User Testing: Switch Current Role</span>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.4rem;">
+            <button class="btn btn-secondary btn-sm" onclick="switchUserRole('admin')">
+              🔑 Switch to Admin (Me - Noorudheen)
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="switchUserRole('teacher')">
+              👩‍🏫 Switch to Teacher (Fatima)
+            </button>
+          </div>
+        </div>
+
+        <!-- Google Sign In Container -->
+        <div>
+          <span class="form-label">Google Single Sign-On (Production)</span>
+          <div id="google-signin-btn-container" style="margin-top:0.4rem;">
+            <!-- Rendered by Google Identity Services -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Management Operations (As requested!) -->
+      <div class="card">
+        <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.75rem;">💾 Data Management & Maintenance</h3>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+          Dedicated controls for resetting attendance records without losing your students, or performing a factory reset.
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+          <!-- Clear Attendance Data Only -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; padding:0.75rem; background:var(--bg-input); border-radius:var(--radius-md); border:1px solid var(--border-color);">
+            <div>
+              <strong>🧹 Clear Attendance Data Only</strong>
+              <div style="font-size:0.8rem; color:var(--text-muted);">
+                Deletes attendance session records only. Keeps all students, classes, and subjects safe.
+              </div>
+            </div>
+            <button class="btn btn-danger-outline btn-sm" onclick="openModal('modal-clear-attendance')">
+              Clear Attendance Only
+            </button>
+          </div>
+
+          <!-- Reset App Button -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; padding:0.75rem; background:var(--bg-input); border-radius:var(--radius-md); border:1px solid var(--border-color);">
+            <div>
+              <strong>⚠️ Reset App (Factory State)</strong>
+              <div style="font-size:0.8rem; color:var(--text-muted);">
+                Wipes all school data (attendance, students, classes, subjects) back to zero.
+              </div>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="openModal('modal-reset-app')">
+              Reset App Data
+            </button>
+          </div>
+
+          <!-- Load Sample Data -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; padding:0.75rem; background:var(--bg-input); border-radius:var(--radius-md); border:1px solid var(--border-color);">
+            <div>
+              <strong>🌱 Load Demo School Data</strong>
+              <div style="font-size:0.8rem; color:var(--text-muted);">
+                Preload 3 classes, 4 subjects, 8 students and 20+ attendance sessions for rapid evaluation.
+              </div>
+            </div>
+            <button id="btn-seed-sample-action" class="btn btn-success btn-sm">
+              🌱 Load Demo School Data
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Logs (As requested!) -->
+      <div class="card">
+        <div class="section-header" style="margin-bottom:0.5rem;">
+          <h3 style="font-size:1.05rem; font-weight:700;">🕒 Activity Audit Logs</h3>
+          <button class="btn btn-secondary btn-sm" onclick="renderSettingsView()">🔄 Refresh</button>
+        </div>
+        <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+          Real-time record of all actions performed across Hajar App.
+        </p>
+
+        <div id="settings-activities-container" style="max-height:280px; overflow-y:auto;">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- System Diagnostic Stats -->
+      <div class="card">
+        <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.5rem;">⚙️ System Diagnostics & MongoDB</h3>
+        <div id="settings-system-stats">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- Bottom Navigation Bar: Students, Class, Subjects (Specified in requirements!) -->
+  <nav class="bottom-nav" aria-label="Bottom Navigation Bar">
+    <button class="bottom-nav-btn" data-tab="students">
+      <span class="icon">👨‍🎓</span>
+      <span>Students</span>
+    </button>
+
+    <button class="bottom-nav-btn" data-tab="classes">
+      <span class="icon">🏫</span>
+      <span>Classes</span>
+    </button>
+
+    <!-- Quick Add Central Action -->
+    <button id="btn-quick-add" class="bottom-quick-add" title="Quick Add" aria-label="Add item">
+      +
+    </button>
+
+    <button class="bottom-nav-btn" data-tab="subjects">
+      <span class="icon">📚</span>
+      <span>Subjects</span>
+    </button>
+
+    <button class="bottom-nav-btn" data-tab="attendance">
+      <span class="icon">📋</span>
+      <span>Attendance</span>
+    </button>
+  </nav>
+
+
+  <!-- ==========================================
+       MODALS
+       ========================================== -->
+
+  <!-- Add Student Modal -->
+  <div id="modal-add-student" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">👨‍🎓 Add New Student</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-student">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="student-name">Student Full Name *</label>
+            <input type="text" id="student-name" class="form-control" placeholder="e.g. Amina Al-Hajar" required>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="student-roll">Roll Number *</label>
+              <input type="text" id="student-roll" class="form-control" placeholder="e.g. 10A-01" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="modal-student-class">Class & Section *</label>
+              <select id="modal-student-class" class="form-control" required></select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="student-gender">Gender</label>
+              <select id="student-gender" class="form-control">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="student-phone">Parent Phone</label>
+              <input type="tel" id="student-phone" class="form-control" placeholder="e.g. +1 555-0199">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="student-parent">Parent / Guardian Name</label>
+              <input type="text" id="student-parent" class="form-control" placeholder="e.g. Fatima">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="student-email">Email Address</label>
+              <input type="email" id="student-email" class="form-control" placeholder="student@example.com">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Student</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Student Modal -->
+  <div id="modal-edit-student" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Edit Student Information</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-student">
+        <input type="hidden" id="edit-student-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Full Name *</label>
+            <input type="text" id="edit-student-name" class="form-control" required>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Roll Number *</label>
+              <input type="text" id="edit-student-roll" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Class *</label>
+              <select id="edit-student-class" class="form-control" required></select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Gender</label>
+              <select id="edit-student-gender" class="form-control">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Parent Phone</label>
+              <input type="tel" id="edit-student-phone" class="form-control">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Parent Name</label>
+              <input type="text" id="edit-student-parent" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="edit-student-email" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Student</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Class Modal -->
+  <div id="modal-add-class" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">🏫 Add New Class</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-class">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="class-name">Class / Grade Name *</label>
+              <input type="text" id="class-name" class="form-control" placeholder="e.g. Grade 10" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="class-section">Section *</label>
+              <input type="text" id="class-section" class="form-control" placeholder="e.g. A" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="class-year">Academic Year *</label>
+            <input type="text" id="class-year" class="form-control" value="2026" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="class-desc">Description</label>
+            <input type="text" id="class-desc" class="form-control" placeholder="e.g. Senior Secondary Sciences">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Class</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Class Modal -->
+  <div id="modal-edit-class" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Edit Class</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-class">
+        <input type="hidden" id="edit-class-id">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Class Name *</label>
+              <input type="text" id="edit-class-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Section *</label>
+              <input type="text" id="edit-class-section" class="form-control" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Academic Year *</label>
+            <input type="text" id="edit-class-year" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <input type="text" id="edit-class-desc" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Class</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Subject Modal -->
+  <div id="modal-add-subject" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">📚 Add New Subject</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-subject">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="subject-name">Subject Name *</label>
+              <input type="text" id="subject-name" class="form-control" placeholder="e.g. Mathematics" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="subject-code">Subject Code</label>
+              <input type="text" id="subject-code" class="form-control" placeholder="e.g. MATH101">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assign to Classes</label>
+            <div id="add-subject-classes-container" style="max-height:160px; overflow-y:auto; background:var(--bg-input); padding:0.75rem; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Subject</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Subject Modal -->
+  <div id="modal-edit-subject" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Edit Subject</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-subject">
+        <input type="hidden" id="edit-subject-id">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Subject Name *</label>
+              <input type="text" id="edit-subject-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Subject Code</label>
+              <input type="text" id="edit-subject-code" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assigned Classes</label>
+            <div id="edit-subject-classes-container" style="max-height:160px; overflow-y:auto; background:var(--bg-input); padding:0.75rem; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Subject</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Student Attendance History Drilldown Modal -->
+  <div id="modal-student-history" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="history-modal-name" class="modal-title">Student Attendance History</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="history-modal-stats" style="font-size:0.85rem; margin-bottom:1rem; padding:0.6rem 0.8rem; background:var(--bg-input); border-radius:var(--radius-sm);"></div>
+        <div id="history-modal-logs" style="max-height:350px; overflow-y:auto;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clear Attendance Confirmation Modal -->
+  <div id="modal-clear-attendance" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--danger)">🧹 Clear Attendance Data Only</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.9rem; line-height:1.6; margin-bottom:1rem;">
+          This action will <b>permanently delete attendance session records</b>.
+          <br>
+          <span style="color:var(--success); font-weight:600;">✓ Your students, classes, and subjects will NOT be deleted.</span>
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="clear-attendance-class">Select Target Class Scope</label>
+          <select id="clear-attendance-class" class="form-control">
+            <option value="all">All Classes (Entire School)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+        <button type="button" id="btn-clear-attendance-action" class="btn btn-danger">Confirm Clear Attendance</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset App Confirmation Modal -->
+  <div id="modal-reset-app" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--danger)">⚠️ Factory Reset Application</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.9rem; line-height:1.6; margin-bottom:1rem;">
+          <b>Warning:</b> This will completely delete all data:
+          <br>• All Student profiles
+          <br>• All Classes & sections
+          <br>• All Curriculum subjects
+          <br>• All Attendance logs
+        </p>
+        <p style="font-size:0.85rem; color:var(--text-muted);">
+          You can reload demo school data anytime using the "Load Demo School Data" button.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+        <button type="button" id="btn-reset-app-action" class="btn btn-danger">Proceed With Factory Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="./js/api.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>

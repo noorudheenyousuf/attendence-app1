@@ -1,0 +1,20 @@
+{
+  "name": "Hajar App - School Management & Attendance",
+  "short_name": "Hajar App",
+  "description": "Smart, mobile-first school management and student attendance tracker with multi-subject reports",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0d9488",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/assets/icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity", "management"]
+}
