@@ -69,7 +69,7 @@ function updateThemeIcon() {
 // Tab & Navigation Switching
 // ==========================================
 function switchTab(tabName) {
-  const validTabs = ['attendance', 'reports', 'settings', 'students', 'classes', 'subjects'];
+  const validTabs = ['attendance', 'reports', 'settings', 'students', 'classes', 'subjects', 'admin'];
   if (!validTabs.includes(tabName)) tabName = 'attendance';
 
   state.activeTab = tabName;
@@ -105,6 +105,8 @@ function switchTab(tabName) {
     renderSubjectsList();
   } else if (tabName === 'settings') {
     renderSettingsView();
+  } else if (tabName === 'admin') {
+    renderAdminUsersView();
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -260,6 +262,26 @@ window.onGoogleLibraryLoad = function() {
 };
 
 async function loadUserData() {
+  if (state.currentUser) {
+    try {
+      const res = await api.auth.getMe();
+      if (res && res.user) {
+        state.currentUser = res.user;
+        localStorage.setItem('hajar_user', JSON.stringify(res.user));
+        if (res.token) {
+          localStorage.setItem('hajar_token', res.token);
+        }
+      }
+    } catch (authErr) {
+      if (authErr.message && (authErr.message.includes('suspended') || authErr.message.includes('invalid') || authErr.message.includes('401'))) {
+        console.warn('Session expired or account suspended:', authErr.message);
+        state.currentUser = null;
+        localStorage.removeItem('hajar_user');
+        localStorage.removeItem('hajar_token');
+      }
+    }
+  }
+
   updateUserUI();
   try {
     const config = await api.auth.getConfig();
@@ -292,6 +314,7 @@ function updateUserUI() {
   const roleEl = document.getElementById('header-user-role');
   const avatarEl = document.getElementById('header-user-avatar');
   const logoutBtn = document.getElementById('btn-header-logout');
+  const adminNavBtn = document.getElementById('nav-btn-admin');
 
   // Settings page elements
   const setAvatar = document.getElementById('settings-user-avatar');
@@ -303,13 +326,23 @@ function updateUserUI() {
   if (state.currentUser) {
     const user = state.currentUser;
     const displayName = user.name || 'User';
-    const displayRole = (user.role || 'teacher').toUpperCase();
-    const avatarSrc = user.avatar || (user.role === 'admin' ? '/black coat.jpeg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.email || 'user'}`);
+    
+    let displayRole = 'USER';
+    let roleClass = 'role-pill user';
+    if (user.role === 'super_admin') {
+      displayRole = 'SUPER ADMIN';
+      roleClass = 'role-pill super_admin';
+    } else if (user.role === 'admin') {
+      displayRole = 'CUSTOM ADMIN';
+      roleClass = 'role-pill admin';
+    }
+
+    const avatarSrc = user.avatar || (user.role === 'super_admin' ? '/black coat.jpeg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.email || 'user'}`);
 
     if (nameEl) nameEl.textContent = displayName;
     if (roleEl) {
       roleEl.textContent = displayRole;
-      roleEl.className = `role-pill ${user.role || 'teacher'}`;
+      roleEl.className = roleClass;
     }
     if (avatarEl) avatarEl.src = avatarSrc;
     if (logoutBtn) logoutBtn.style.display = 'flex';
@@ -318,23 +351,36 @@ function updateUserUI() {
     if (setName) setName.textContent = displayName;
     if (setRole) {
       setRole.textContent = displayRole;
-      setRole.className = `role-pill ${user.role || 'teacher'}`;
+      setRole.className = roleClass;
     }
     if (setUserId) setUserId.textContent = user.userId || user.email?.split('@')[0] || '-';
     if (setEmail) setEmail.textContent = user.email || '-';
+
+    // Show or hide Admin Management tab based on authorized roles/permissions
+    if (adminNavBtn) {
+      const isSuper = user.role === 'super_admin';
+      const isCustomAdmin = user.role === 'admin';
+      const hasUserView = Array.isArray(user.permissions) && user.permissions.includes('users.view');
+      if (isSuper || isCustomAdmin || hasUserView) {
+        adminNavBtn.style.display = 'flex';
+      } else {
+        adminNavBtn.style.display = 'none';
+      }
+    }
   } else {
     if (nameEl) nameEl.textContent = 'Sign In';
     if (roleEl) {
       roleEl.textContent = 'GUEST';
-      roleEl.className = 'role-pill teacher';
+      roleEl.className = 'role-pill user';
     }
     if (avatarEl) avatarEl.src = 'https://api.dicebear.com/7.x/bottts/svg?seed=guest';
     if (logoutBtn) logoutBtn.style.display = 'none';
+    if (adminNavBtn) adminNavBtn.style.display = 'none';
 
     if (setName) setName.textContent = 'Not Logged In';
     if (setRole) {
       setRole.textContent = 'GUEST';
-      setRole.className = 'role-pill teacher';
+      setRole.className = 'role-pill user';
     }
     if (setUserId) setUserId.textContent = 'None';
     if (setEmail) setEmail.textContent = 'Please sign in with User ID/Password or Google';
@@ -1343,15 +1389,59 @@ window.toggleDemoEnvironment = async function(isDemo) {
 // ==========================================
 let pendingRestoreData = null;
 
-window.downloadBackupExport = function() {
-  const downloadUrl = api.settings.getExportBackupUrl();
-  const link = document.createElement('a');
-  link.href = downloadUrl;
-  link.setAttribute('download', `hajar_backup_${new Date().toISOString().slice(0, 10)}.json`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  showToast('📥 Starting backup file export download...', 'info');
+window.downloadBackupExport = async function() {
+  showToast('📥 Preparing backup file…', 'info');
+  try {
+    const authToken = localStorage.getItem('hajar_token');
+    const currentEnv = (window.state && window.state.environment) || localStorage.getItem('hajar_env') || 'real';
+    const headers = { 'X-Environment': currentEnv };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+    const res = await fetch(api.settings.getExportBackupUrl(), { headers });
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+    const blob = await res.blob();
+    const filename = `hajar_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast('✅ Backup downloaded as ' + filename, 'success');
+  } catch (err) {
+    showToast('❌ Export failed: ' + err.message, 'error');
+  }
+};
+
+window.downloadBackupById = async function(id, name, filenameSuffix) {
+  showToast('📥 Preparing backup file…', 'info');
+  try {
+    const authToken = localStorage.getItem('hajar_token');
+    const currentEnv = (window.state && window.state.environment) || localStorage.getItem('hajar_env') || 'real';
+    const headers = { 'X-Environment': currentEnv };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+    const res = await fetch(api.settings.getDownloadBackupUrl(id), { headers });
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+    const blob = await res.blob();
+    const safeSuffix = (filenameSuffix || id).replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const filename = `hajar_backup_${safeSuffix}.json`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast('✅ Backup downloaded as ' + filename, 'success');
+  } catch (err) {
+    showToast('❌ Download failed: ' + err.message, 'error');
+  }
 };
 
 window.handleCreateManualBackup = async function() {
@@ -1492,9 +1582,9 @@ window.renderBackupsList = async function() {
             </div>
           </div>
           <div class="backup-actions">
-            <a class="btn btn-secondary btn-sm" href="${api.settings.getDownloadBackupUrl(b._id)}" download title="Download this backup file">
+            <button class="btn btn-secondary btn-sm" onclick="downloadBackupById('${b._id}', '${escapeHtml(b.name).replace(/'/g, "\\'")}', '${b.reason || 'saved'}_${new Date(b.timestamp).getTime()}')" title="Download this backup file">
               📥 Download
-            </a>
+            </button>
             <button class="btn btn-primary btn-sm" onclick="restoreBackupById('${b._id}', '${escapeHtml(b.name).replace(/'/g, "\\'")}')" title="Restore this backup">
               🔄 Restore
             </button>
@@ -1520,6 +1610,9 @@ window.switchUserRole = async function(role) {
     );
     state.currentUser = res.user;
     localStorage.setItem('hajar_user', JSON.stringify(res.user));
+    if (res.token) {
+      localStorage.setItem('hajar_token', res.token);
+    }
     updateUserUI();
     showToast(`Switched to ${res.user.role.toUpperCase()}: ${res.user.name}`, 'success');
     renderSettingsView();
@@ -1586,6 +1679,9 @@ async function handleGoogleCredentialResponse(response) {
     if (res.success && res.user) {
       state.currentUser = res.user;
       localStorage.setItem('hajar_user', JSON.stringify(res.user));
+      if (res.token) {
+        localStorage.setItem('hajar_token', res.token);
+      }
       updateUserUI();
       closeModal('modal-auth');
       showToast(`Welcome ${res.user.name} (${res.user.role.toUpperCase()})!`, 'success');
@@ -1706,6 +1802,9 @@ window.handleModalPasswordLogin = async function(e) {
 
     state.currentUser = res.user;
     localStorage.setItem('hajar_user', JSON.stringify(res.user));
+    if (res.token) {
+      localStorage.setItem('hajar_token', res.token);
+    }
     updateUserUI();
     showToast(`Welcome back, ${res.user.name} (${res.user.role.toUpperCase()})!`, 'success');
     closeModal('modal-auth');
@@ -1723,7 +1822,6 @@ window.handleModalRegistration = async function(e) {
   e.preventDefault();
   const name = document.getElementById('modal-reg-name').value.trim();
   const userId = document.getElementById('modal-reg-userid').value.trim();
-  const role = document.getElementById('modal-reg-role').value;
   const email = document.getElementById('modal-reg-email').value.trim();
   const password = document.getElementById('modal-reg-password').value;
   const submitBtn = document.getElementById('btn-modal-reg-submit');
@@ -1733,13 +1831,16 @@ window.handleModalRegistration = async function(e) {
   hideModalAuthAlert();
 
   try {
-    const res = await api.auth.register({ name, userId, role, email, password });
+    const res = await api.auth.register({ name, userId, email, password });
     if (!res.success || !res.user) {
       throw new Error(res.error || 'Registration failed');
     }
 
     state.currentUser = res.user;
     localStorage.setItem('hajar_user', JSON.stringify(res.user));
+    if (res.token) {
+      localStorage.setItem('hajar_token', res.token);
+    }
     updateUserUI();
     showToast(`Account created! Welcome, ${res.user.name}!`, 'success');
     closeModal('modal-auth');
@@ -1769,6 +1870,9 @@ window.quickModalLogin = async function(userId, password) {
 
     state.currentUser = res.user;
     localStorage.setItem('hajar_user', JSON.stringify(res.user));
+    if (res.token) {
+      localStorage.setItem('hajar_token', res.token);
+    }
     updateUserUI();
     showToast(`Logged in as ${res.user.role.toUpperCase()}: ${res.user.name}`, 'success');
     closeModal('modal-auth');
@@ -1792,6 +1896,7 @@ window.handleLogout = async function() {
   } finally {
     state.currentUser = null;
     localStorage.removeItem('hajar_user');
+    localStorage.removeItem('hajar_token');
     window.location.replace('/login.html?logout=true');
   }
 };
@@ -2083,3 +2188,543 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+
+// ==========================================
+// ADMIN & ROLE MANAGEMENT (Objectives 2, 4, 6, 7, 8, 10)
+// ==========================================
+const adminState = {
+  users: [],
+  page: 1,
+  limit: 10,
+  totalPages: 1,
+  totalUsers: 0,
+  search: '',
+  role: 'all',
+  status: 'all',
+  permissionRegistry: null,
+  activeTargetUser: null
+};
+
+window.renderAdminUsersView = async function(page) {
+  if (typeof page === 'number') {
+    adminState.page = page;
+  }
+
+  const searchInput = document.getElementById('admin-search-input');
+  const roleFilter = document.getElementById('admin-role-filter');
+  const statusFilter = document.getElementById('admin-status-filter');
+  const roleNoticeBadge = document.getElementById('admin-user-current-role-badge');
+  const roleNoticeDesc = document.getElementById('admin-user-role-desc');
+
+  if (searchInput) adminState.search = searchInput.value.trim();
+  if (roleFilter) adminState.role = roleFilter.value;
+  if (statusFilter) adminState.status = statusFilter.value;
+
+  const currentUser = state.currentUser;
+  const isSuper = currentUser && currentUser.role === 'super_admin';
+  const isCustomAdmin = currentUser && currentUser.role === 'admin';
+
+  if (roleNoticeBadge) {
+    roleNoticeBadge.textContent = isSuper 
+      ? '👑 Primary Super Admin Console' 
+      : (isCustomAdmin ? '🛡️ Custom Admin View' : 'User View');
+  }
+  if (roleNoticeDesc) {
+    roleNoticeDesc.textContent = isSuper
+      ? 'You hold primary Super Admin authority. You can promote members to Custom Admin, demote them, and configure exact feature permissions.'
+      : 'You can review registered members and audit logs. Sensitive role promotions and permission configurations require Super Admin authority.';
+  }
+
+  const container = document.getElementById('admin-users-container');
+  if (!container) return;
+
+  container.innerHTML = '<p class="empty-state">Loading registered accounts...</p>';
+
+  try {
+    const data = await api.admin.getUsers({
+      page: adminState.page,
+      limit: adminState.limit,
+      search: adminState.search,
+      role: adminState.role,
+      status: adminState.status
+    });
+
+    adminState.users = data.users || [];
+    adminState.totalPages = data.pagination?.totalPages || 1;
+    adminState.totalUsers = data.pagination?.totalUsers || adminState.users.length;
+    adminState.page = data.pagination?.page || 1;
+
+    if (adminState.users.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:2.5rem 1rem;">
+          <div style="font-size:2rem; margin-bottom:0.5rem;">🔍</div>
+          <h4>No matching users found</h4>
+          <p style="color:var(--text-muted); font-size:0.85rem;">Try adjusting your search query or filter settings.</p>
+        </div>
+      `;
+    } else {
+      container.innerHTML = adminState.users.map(u => {
+        const isSelf = currentUser && (u._id === currentUser._id || u.email === currentUser.email);
+        const isTargetSuper = u.role === 'super_admin' || u.isSuperAdminProtected;
+        const isTargetAdmin = u.role === 'admin';
+        const isTargetUser = u.role === 'user';
+        const isActive = u.isActive !== false;
+        const isVerified = Boolean(u.isEmailVerified);
+
+        // Role Pill
+        let roleBadgeHtml = '<span class="role-pill user">MEMBER</span>';
+        if (isTargetSuper) {
+          roleBadgeHtml = '<span class="role-pill super_admin">👑 SUPER ADMIN</span>';
+        } else if (isTargetAdmin) {
+          roleBadgeHtml = '<span class="role-pill admin">🛡️ CUSTOM ADMIN</span>';
+        }
+
+        // Status Pill
+        const statusBadgeHtml = isActive
+          ? '<span class="status-pill active">✓ Active</span>'
+          : '<span class="status-pill suspended">⛔ Suspended</span>';
+
+        // Verification Pill
+        const verifyBadgeHtml = isVerified
+          ? '<span class="status-pill verified" title="Email ownership verified">✓ Verified</span>'
+          : '<span class="status-pill unverified" title="Email not verified">⚠️ Unverified</span>';
+
+        // Avatar
+        const avatarSrc = u.avatar || (isTargetSuper ? '/black coat.jpeg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.email || u.name)}`);
+
+        // Permissions Breakdown
+        let permsHtml = '';
+        if (isTargetSuper) {
+          permsHtml = '<span style="font-size:0.82rem; color:var(--primary-400); font-weight:600;">Universal Access & System Administration (*)</span>';
+        } else if (isTargetAdmin) {
+          const perms = Array.isArray(u.permissions) ? u.permissions : [];
+          if (perms.length === 0) {
+            permsHtml = '<span style="font-size:0.8rem; color:var(--danger); font-style:italic;">⚠️ No permissions assigned yet (Strict No-Access)</span>';
+          } else {
+            const preview = perms.slice(0, 6);
+            const remainder = perms.length - preview.length;
+            permsHtml = `
+              <div style="display:flex; flex-wrap:wrap; gap:0.35rem; align-items:center;">
+                ${preview.map(p => `<span class="perm-tag">${escapeHtml(p)}</span>`).join('')}
+                ${remainder > 0 ? `<span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">+${remainder} more</span>` : ''}
+              </div>
+            `;
+          }
+        } else {
+          permsHtml = '<span style="font-size:0.8rem; color:var(--text-muted);">Standard member access (Attendance viewing/recording)</span>';
+        }
+
+        // Action Buttons
+        let actionsHtml = '';
+        if (isSuper) {
+          if (isTargetSuper) {
+            actionsHtml = `<span class="role-pill super_admin" style="font-size:0.75rem;">🔒 Primary Owner</span>`;
+          } else if (isTargetAdmin) {
+            actionsHtml = `
+              <div style="display:flex; flex-wrap:wrap; gap:0.4rem; justify-content:flex-end;">
+                <button class="btn btn-secondary btn-sm" onclick="openPermissionModal('${u._id}')" title="Configure individual feature permissions">
+                  ⚙️ Permissions (${(u.permissions || []).length})
+                </button>
+                <button class="btn btn-warning btn-sm" onclick="promptDemoteUser('${u._id}', '${escapeHtml(u.name)}')" title="Demote to normal user">
+                  ⬇️ Demote to User
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="handleToggleUserStatus('${u._id}', '${escapeHtml(u.name)}', ${isActive})">
+                  ${isActive ? '⛔ Suspend' : '✓ Activate'}
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="handleDeleteUser('${u._id}', '${escapeHtml(u.name)}')">
+                  🗑️ Delete
+                </button>
+              </div>
+            `;
+          } else {
+            actionsHtml = `
+              <div style="display:flex; flex-wrap:wrap; gap:0.4rem; justify-content:flex-end;">
+                <button class="btn btn-primary btn-sm" onclick="promptPromoteUser('${u._id}', '${escapeHtml(u.name)}')" title="Promote user to Custom Admin">
+                  👑 Promote to Admin
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="handleToggleUserStatus('${u._id}', '${escapeHtml(u.name)}', ${isActive})">
+                  ${isActive ? '⛔ Suspend' : '✓ Activate'}
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="handleDeleteUser('${u._id}', '${escapeHtml(u.name)}')">
+                  🗑️ Delete
+                </button>
+              </div>
+            `;
+          }
+        } else {
+          actionsHtml = `<span style="font-size:0.8rem; color:var(--text-muted);">View Only</span>`;
+        }
+
+        return `
+          <div class="admin-user-card" id="user-card-${u._id}">
+            <div style="display:flex; gap:0.85rem; align-items:flex-start; flex:1; min-width:260px;">
+              <img src="${avatarSrc}" alt="${escapeHtml(u.name)}" class="user-avatar" style="width:46px; height:46px; border-radius:50%; object-fit:cover; border:2px solid var(--border-color); flex-shrink:0;">
+              <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                  <strong style="font-size:0.95rem; color:var(--text-primary);">${escapeHtml(u.name)}</strong>
+                  ${isSelf ? '<span class="status-pill active" style="font-size:0.7rem;">YOU</span>' : ''}
+                  ${roleBadgeHtml}
+                  ${statusBadgeHtml}
+                  ${verifyBadgeHtml}
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.2rem;">
+                  <span>📧 ${escapeHtml(u.email || '-')}</span>
+                  <span style="margin: 0 0.4rem;">•</span>
+                  <span>ID: <code style="font-size:0.75rem;">${escapeHtml(u.userId || u.email?.split('@')[0] || '-')}</code></span>
+                  <span style="margin: 0 0.4rem;">•</span>
+                  <span>Joined: ${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</span>
+                </div>
+                <div style="margin-top:0.55rem; padding-top:0.5rem; border-top:1px dashed var(--border-color);">
+                  <div style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; margin-bottom:0.25rem;">
+                    Feature Permissions:
+                  </div>
+                  ${permsHtml}
+                </div>
+              </div>
+            </div>
+            <div style="align-self:center;">
+              ${actionsHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Pagination
+    const paginationContainer = document.getElementById('admin-users-pagination');
+    if (paginationContainer) {
+      const page = adminState.page;
+      const totalPages = adminState.totalPages;
+      const totalUsers = adminState.totalUsers;
+      const startCount = totalUsers === 0 ? 0 : (page - 1) * adminState.limit + 1;
+      const endCount = Math.min(page * adminState.limit, totalUsers);
+
+      paginationContainer.innerHTML = `
+        <div style="font-size:0.85rem; color:var(--text-secondary);">
+          Showing <b>${startCount}</b> to <b>${endCount}</b> of <b>${totalUsers}</b> members
+        </div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <button class="btn btn-secondary btn-sm" onclick="changeAdminPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>
+            ◀ Previous
+          </button>
+          <span style="font-size:0.85rem; font-weight:600; padding:0 0.5rem;">
+            Page ${page} of ${totalPages}
+          </span>
+          <button class="btn btn-secondary btn-sm" onclick="changeAdminPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>
+            Next ▶
+          </button>
+        </div>
+      `;
+    }
+  } catch (err) {
+    container.innerHTML = `
+      <div style="padding:1rem; background:var(--danger-bg); border:1px solid var(--danger); border-radius:var(--radius-md); color:#fee2e2;">
+        <strong>Error loading user accounts:</strong> ${escapeHtml(err.message)}
+      </div>
+    `;
+  }
+
+  // Load audit logs in parallel
+  renderAdminAuditLogs();
+};
+
+window.handleAdminUserSearch = debounce(() => {
+  renderAdminUsersView(1);
+}, 350);
+
+window.resetAdminUserFilters = function() {
+  const searchInput = document.getElementById('admin-search-input');
+  const roleFilter = document.getElementById('admin-role-filter');
+  const statusFilter = document.getElementById('admin-status-filter');
+
+  if (searchInput) searchInput.value = '';
+  if (roleFilter) roleFilter.value = 'all';
+  if (statusFilter) statusFilter.value = 'all';
+
+  adminState.search = '';
+  adminState.role = 'all';
+  adminState.status = 'all';
+  renderAdminUsersView(1);
+};
+
+window.changeAdminPage = function(p) {
+  if (p < 1 || p > adminState.totalPages) return;
+  renderAdminUsersView(p);
+};
+
+// ==========================================
+// Role Promotion & Demotion Modals (Objective 4 & 6)
+// ==========================================
+window.promptPromoteUser = function(userId, userName) {
+  const titleEl = document.getElementById('role-confirm-title');
+  const alertEl = document.getElementById('role-confirm-alert');
+  const descEl = document.getElementById('role-confirm-desc');
+  const actionBtn = document.getElementById('btn-confirm-role-action');
+
+  if (titleEl) titleEl.textContent = '👑 Promote to Custom Admin';
+  if (alertEl) {
+    alertEl.style.background = 'rgba(59, 130, 246, 0.15)';
+    alertEl.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+    alertEl.style.color = '#bfdbfe';
+    alertEl.innerHTML = `You are promoting <strong>${escapeHtml(userName)}</strong> to <strong>Custom Admin</strong>.`;
+  }
+  if (descEl) {
+    descEl.innerHTML = `
+      Under Hajar's strict security model, newly promoted Custom Admins receive <b>0 permissions by default</b>. 
+      After confirming, you can explicitly select which specific features they are authorized to manage.
+    `;
+  }
+
+  if (actionBtn) {
+    actionBtn.className = 'btn btn-primary';
+    actionBtn.textContent = 'Confirm Promotion';
+    actionBtn.onclick = async () => {
+      actionBtn.disabled = true;
+      actionBtn.textContent = 'Promoting...';
+      try {
+        const res = await api.admin.promoteUser(userId);
+        showToast(res.message || `${userName} successfully promoted to Custom Admin!`, 'success');
+        closeModal('modal-confirm-role-change');
+        await renderAdminUsersView();
+        // Automatically open permissions modal so Super Admin can assign permissions immediately
+        openPermissionModal(userId);
+      } catch (err) {
+        showToast(`Promotion failed: ${err.message}`, 'error');
+      } finally {
+        actionBtn.disabled = false;
+        actionBtn.textContent = 'Confirm Promotion';
+      }
+    };
+  }
+
+  openModal('modal-confirm-role-change');
+};
+
+window.promptDemoteUser = function(userId, userName) {
+  const titleEl = document.getElementById('role-confirm-title');
+  const alertEl = document.getElementById('role-confirm-alert');
+  const descEl = document.getElementById('role-confirm-desc');
+  const actionBtn = document.getElementById('btn-confirm-role-action');
+
+  if (titleEl) titleEl.textContent = '⬇️ Demote Admin to Normal User';
+  if (alertEl) {
+    alertEl.style.background = 'var(--danger-bg)';
+    alertEl.style.borderColor = 'var(--danger)';
+    alertEl.style.color = '#fee2e2';
+    alertEl.innerHTML = `⚠️ Demoting <strong>${escapeHtml(userName)}</strong> to normal user.`;
+  }
+  if (descEl) {
+    descEl.innerHTML = `
+      This will revoke administrative privileges and <b>immediately clear all assigned feature permissions</b>. 
+      The user will revert to a standard member with no administrative access.
+    `;
+  }
+
+  if (actionBtn) {
+    actionBtn.className = 'btn btn-danger';
+    actionBtn.textContent = 'Confirm Demotion';
+    actionBtn.onclick = async () => {
+      actionBtn.disabled = true;
+      actionBtn.textContent = 'Demoting...';
+      try {
+        const res = await api.admin.demoteUser(userId);
+        showToast(res.message || `${userName} has been demoted to normal user`, 'info');
+        closeModal('modal-confirm-role-change');
+        await renderAdminUsersView();
+      } catch (err) {
+        showToast(`Demotion failed: ${err.message}`, 'error');
+      } finally {
+        actionBtn.disabled = false;
+        actionBtn.textContent = 'Confirm Demotion';
+      }
+    };
+  }
+
+  openModal('modal-confirm-role-change');
+};
+
+// ==========================================
+// Individual Feature Permission Modal (Objective 6 & 8)
+// ==========================================
+window.openPermissionModal = async function(userId) {
+  const container = document.getElementById('perm-categories-container');
+  const nameEl = document.getElementById('perm-user-name');
+  const emailEl = document.getElementById('perm-user-email');
+  const roleBadge = document.getElementById('perm-user-role-badge');
+  const saveBtn = document.getElementById('btn-save-permissions-action');
+
+  if (container) container.innerHTML = '<p class="empty-state">Loading user permissions and registry...</p>';
+  openModal('modal-manage-permissions');
+
+  try {
+    const [userRes, regRes] = await Promise.all([
+      api.admin.getUser(userId),
+      adminState.permissionRegistry ? Promise.resolve(adminState.permissionRegistry) : api.admin.getPermissions()
+    ]);
+
+    adminState.permissionRegistry = regRes;
+    const targetUser = userRes.user;
+    adminState.activeTargetUser = targetUser;
+
+    if (nameEl) nameEl.textContent = targetUser.name || 'User';
+    if (emailEl) emailEl.textContent = targetUser.email || '-';
+    if (roleBadge) {
+      roleBadge.textContent = targetUser.role === 'super_admin' ? 'SUPER ADMIN' : 'CUSTOM ADMIN';
+      roleBadge.className = `role-pill ${targetUser.role}`;
+    }
+
+    const assignedPerms = new Set(targetUser.permissions || []);
+    const categories = regRes.categories || [];
+
+    if (container) {
+      container.innerHTML = categories.map(cat => {
+        return `
+          <div class="perm-category-box" data-cat="${cat.id}">
+            <div class="perm-category-header">
+              <div>
+                <span class="perm-category-title">${cat.icon || '📁'} ${escapeHtml(cat.name)}</span>
+                <div class="perm-category-desc">${escapeHtml(cat.description || '')}</div>
+              </div>
+              <div style="display:flex; gap:0.35rem;">
+                <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:0.2rem 0.5rem;" onclick="toggleCategoryPerms('${cat.id}', true)">Select All</button>
+                <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:0.2rem 0.5rem;" onclick="toggleCategoryPerms('${cat.id}', false)">Clear</button>
+              </div>
+            </div>
+            <div class="perm-grid">
+              ${cat.permissions.map(p => {
+                const checked = assignedPerms.has(p.id) ? 'checked' : '';
+                return `
+                  <div class="perm-item">
+                    <input type="checkbox" name="perm-checkbox" data-category="${cat.id}" data-perm="${p.id}" id="chk-perm-${p.id.replace(/\./g, '-')}" ${checked}>
+                    <label for="chk-perm-${p.id.replace(/\./g, '-')}">
+                      <strong>${escapeHtml(p.label)}</strong>
+                      <span class="perm-id-badge">${escapeHtml(p.id)}</span>
+                      <small>${escapeHtml(p.description)}</small>
+                    </label>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Configure save button
+    if (saveBtn) {
+      saveBtn.onclick = async () => {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        try {
+          const checked = Array.from(document.querySelectorAll('input[name="perm-checkbox"]:checked'))
+            .map(cb => cb.dataset.perm);
+
+          const res = await api.admin.updateUserPermissions(userId, checked);
+          showToast(res.message || `Permissions saved successfully for ${targetUser.name}!`, 'success');
+          closeModal('modal-manage-permissions');
+          await renderAdminUsersView();
+        } catch (err) {
+          showToast(`Failed to update permissions: ${err.message}`, 'error');
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Permissions';
+        }
+      };
+    }
+  } catch (err) {
+    if (container) {
+      container.innerHTML = `<p style="color:var(--danger)">Error loading permissions: ${escapeHtml(err.message)}</p>`;
+    }
+  }
+};
+
+window.toggleCategoryPerms = function(catId, selectAll) {
+  const checkboxes = document.querySelectorAll(`input[name="perm-checkbox"][data-category="${catId}"]`);
+  checkboxes.forEach(cb => { cb.checked = selectAll; });
+};
+
+window.toggleAllPermissions = function(selectAll) {
+  const checkboxes = document.querySelectorAll('input[name="perm-checkbox"]');
+  checkboxes.forEach(cb => { cb.checked = selectAll; });
+};
+
+// ==========================================
+// User Status & Account Deletion (Objectives 4 & 6)
+// ==========================================
+window.handleToggleUserStatus = async function(userId, userName, currentActive) {
+  const actionText = currentActive ? 'suspend' : 'activate';
+  if (!confirm(`Are you sure you want to ${actionText} the account for ${userName}?`)) {
+    return;
+  }
+  try {
+    const res = await api.admin.updateUserStatus(userId, !currentActive);
+    showToast(res.message || `Account for ${userName} has been ${actionText}d`, 'info');
+    renderAdminUsersView();
+  } catch (err) {
+    showToast(`Failed to update status: ${err.message}`, 'error');
+  }
+};
+
+window.handleDeleteUser = async function(userId, userName) {
+  if (!confirm(`⚠️ PERMANENT ACTION: Are you sure you want to permanently delete ${userName}'s account? This action cannot be reversed.`)) {
+    return;
+  }
+  try {
+    const res = await api.admin.deleteUser(userId);
+    showToast(res.message || `User ${userName} deleted successfully`, 'success');
+    renderAdminUsersView();
+  } catch (err) {
+    showToast(`Failed to delete user: ${err.message}`, 'error');
+  }
+};
+
+// ==========================================
+// Security & Role Audit Logs (Objective 10)
+// ==========================================
+window.renderAdminAuditLogs = async function() {
+  const container = document.getElementById('admin-audit-logs-container');
+  if (!container) return;
+
+  try {
+    const data = await api.admin.getAuditLogs({ limit: 15 });
+    const logs = data.logs || [];
+
+    if (logs.length === 0) {
+      container.innerHTML = '<p class="empty-state">No administrative actions logged yet.</p>';
+      return;
+    }
+
+    container.innerHTML = logs.map(log => {
+      const time = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A';
+      const actorName = log.user?.name || log.actorName || 'System';
+      const actorRole = (log.user?.role || log.actorRole || 'admin').toUpperCase();
+      const actionType = log.actionType || log.action || 'ADMIN_ACTION';
+
+      let actionBadgeClass = 'role-pill admin';
+      if (actionType.includes('PROMOT')) actionBadgeClass = 'role-pill super_admin';
+      if (actionType.includes('DEMOT') || actionType.includes('DELETE') || actionType.includes('SUSPEND')) actionBadgeClass = 'role-pill user';
+
+      return `
+        <div class="activity-item" style="padding:0.6rem 0; border-bottom:1px solid var(--border-color);">
+          <div class="activity-dot" style="background:var(--primary-500);"></div>
+          <div style="flex:1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.35rem;">
+              <span class="${actionBadgeClass}" style="font-size:0.7rem; font-weight:700;">${escapeHtml(actionType)}</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">${time}</span>
+            </div>
+            <div style="font-size:0.84rem; color:var(--text-primary); margin-top:0.25rem;">
+              <strong>${escapeHtml(log.description || 'Administrative operation')}</strong>
+            </div>
+            <div style="font-size:0.76rem; color:var(--text-secondary); margin-top:0.15rem;">
+              Actor: <b>${escapeHtml(actorName)}</b> (${actorRole})
+              ${log.targetUser ? ` • Target: <b>${escapeHtml(log.targetUser.name || log.targetUser.email || log.targetUser)}</b>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = `<p style="color:var(--danger); font-size:0.85rem;">Error loading audit logs: ${escapeHtml(err.message)}</p>`;
+  }
+};
+

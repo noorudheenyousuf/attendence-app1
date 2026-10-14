@@ -5,6 +5,7 @@ const Student = require('../models/Student');
 const Subject = require('../models/Subject');
 const Attendance = require('../models/Attendance');
 const { logActivity } = require('../utils/logger');
+const { authenticateUser, requirePermission } = require('../middleware/authMiddleware');
 
 // GET all classes with student and subject counts
 router.get('/', async (req, res) => {
@@ -41,7 +42,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // CREATE class
-router.post('/', async (req, res) => {
+router.post('/', authenticateUser, requirePermission('classes.manage'), async (req, res) => {
   try {
     const { name, section, academicYear, description, user } = req.body;
     if (!name) {
@@ -56,7 +57,7 @@ router.post('/', async (req, res) => {
     });
 
     await newClass.save();
-    await logActivity('CLASS_CREATED', `Added new class: ${newClass.name} - ${newClass.section}`, user);
+    await logActivity('CLASS_CREATED', `Added new class: ${newClass.name} - ${newClass.section}`, req.user || user);
 
     res.status(201).json(newClass);
   } catch (err) {
@@ -65,7 +66,7 @@ router.post('/', async (req, res) => {
 });
 
 // UPDATE class
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateUser, requirePermission('classes.manage'), async (req, res) => {
   try {
     const { name, section, academicYear, description, user } = req.body;
     const cls = await Class.findById(req.params.id);
@@ -77,7 +78,7 @@ router.put('/:id', async (req, res) => {
     if (description !== undefined) cls.description = description;
 
     await cls.save();
-    await logActivity('CLASS_UPDATED', `Updated class details: ${cls.name} - ${cls.section}`, user);
+    await logActivity('CLASS_UPDATED', `Updated class details: ${cls.name} - ${cls.section}`, req.user || user);
 
     res.json(cls);
   } catch (err) {
@@ -86,7 +87,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE class
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateUser, requirePermission('classes.manage'), async (req, res) => {
   try {
     const { user } = req.body;
     const cls = await Class.findById(req.params.id);
@@ -106,7 +107,7 @@ router.delete('/:id', async (req, res) => {
     await Attendance.deleteMany({ classId: cls._id });
 
     await Class.findByIdAndDelete(req.params.id);
-    await logActivity('CLASS_DELETED', `Deleted class ${cls.name} (${cls.section}) and associated students`, user);
+    await logActivity('CLASS_DELETED', `Deleted class ${cls.name} (${cls.section}) and associated students`, req.user || user);
 
     res.json({ success: true, message: `Class ${cls.name} deleted successfully` });
   } catch (err) {

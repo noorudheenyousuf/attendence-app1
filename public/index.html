@@ -84,6 +84,9 @@
     <button class="top-nav-btn" data-tab="settings">
       <span class="icon">⚙️</span> Settings
     </button>
+    <button id="nav-btn-admin" class="top-nav-btn" data-tab="admin" style="display:none;">
+      <span class="icon">🛡️</span> Admin
+    </button>
   </nav>
 
   <!-- Persistence Unavailable Warning Banner (Requirement 5) -->
@@ -532,6 +535,88 @@
       <div class="card">
         <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.5rem;">⚙️ System Diagnostics & MongoDB</h3>
         <div id="settings-system-stats">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         VIEW: ADMIN & ROLE MANAGEMENT (Objectives 2, 4, 6, 7)
+         ========================================== -->
+    <section id="view-admin" class="app-view">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title"><span>🛡️</span> Admin & Role Management</h2>
+          <span class="section-subtitle">Manage user roles, designate Custom Admins, and configure individual feature permissions</span>
+        </div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <button class="btn btn-secondary btn-sm" onclick="renderAdminUsersView()">🔄 Refresh</button>
+        </div>
+      </div>
+
+      <!-- Super Admin Notice Banner -->
+      <div id="admin-role-status-notice" style="margin-bottom:1rem; padding:0.75rem 1rem; border-radius:var(--radius-md); background:var(--bg-card); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+        <div>
+          <strong id="admin-user-current-role-badge">Super Admin Console</strong>
+          <div style="font-size:0.8rem; color:var(--text-muted);" id="admin-user-role-desc">
+            You hold primary Super Admin authority. You can promote members to Custom Admin and assign granular feature permissions.
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter & Search Toolbar -->
+      <div class="card" style="padding:0.85rem; margin-bottom:1rem;">
+        <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr auto; align-items:flex-end;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="admin-search-input">Search Members</label>
+            <input type="text" id="admin-search-input" class="form-control" placeholder="Search by name, email, or user ID..." oninput="handleAdminUserSearch()">
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="admin-role-filter">Filter by Role</label>
+            <select id="admin-role-filter" class="form-control" onchange="renderAdminUsersView()">
+              <option value="all">All Roles</option>
+              <option value="super_admin">Super Admin</option>
+              <option value="admin">Custom Admin</option>
+              <option value="user">Normal User</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="admin-status-filter">Filter by Status</label>
+            <select id="admin-status-filter" class="form-control" onchange="renderAdminUsersView()">
+              <option value="all">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="suspended">Suspended Only</option>
+            </select>
+          </div>
+
+          <div>
+            <button class="btn btn-secondary" onclick="resetAdminUserFilters()" style="height:38px;">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users List Cards -->
+      <div id="admin-users-container">
+        <p class="empty-state">Loading registered accounts...</p>
+      </div>
+
+      <!-- Pagination -->
+      <div id="admin-users-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; flex-wrap:wrap; gap:0.5rem;">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Security Audit Logs Card -->
+      <div class="card" style="margin-top:1.5rem;">
+        <div class="section-header" style="margin-bottom:0.5rem;">
+          <h3 style="font-size:1.05rem; font-weight:700;">📜 Security & Role Audit Logs</h3>
+          <button class="btn btn-secondary btn-sm" onclick="renderAdminAuditLogs()">🔄 Refresh Logs</button>
+        </div>
+        <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+          Immutable server-side audit trail of user promotions, demotions, permission updates, and account activations.
+        </p>
+        <div id="admin-audit-logs-container" style="max-height:280px; overflow-y:auto;">
           <!-- Rendered via JS -->
         </div>
       </div>
@@ -1178,6 +1263,74 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-close-modal>Close</button>
         <button type="button" class="btn btn-primary" onclick="downloadBackupExport(); closeModal('modal-persistence-guide');">📥 Export Backup Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: INDIVIDUAL PERMISSION MANAGEMENT (Objective 6 & 8)
+       ========================================== -->
+  <div id="modal-manage-permissions" class="modal-overlay">
+    <div class="modal-card" style="max-width: 640px; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" style="color:var(--primary-500);">⚙️ Individual Feature Permissions</h3>
+          <span style="font-size:0.8rem; color:var(--text-muted);">Configure exact feature access for this Custom Admin</span>
+        </div>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+
+      <div class="modal-body" style="overflow-y:auto; flex:1; padding-top:0.75rem;">
+        <!-- Target User Header Info -->
+        <div id="perm-modal-user-info" style="padding:0.75rem; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+          <div>
+            <h4 id="perm-user-name" style="margin:0; font-size:1rem; color:var(--text-primary);">Member Name</h4>
+            <div id="perm-user-email" style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.15rem;">member@hajar.edu</div>
+          </div>
+          <div>
+            <span id="perm-user-role-badge" class="role-pill admin">CUSTOM ADMIN</span>
+          </div>
+        </div>
+
+        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.85rem; line-height:1.4;">
+          Select the specific application features this administrator is authorized to access. Unchecked features will be strictly denied by the backend.
+        </p>
+
+        <!-- Dynamic Permission Categories Container -->
+        <div id="perm-categories-container">
+          <p class="empty-state">Loading permission categories...</p>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAllPermissions(true)">Select All</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAllPermissions(false)">Clear All</button>
+        <div style="display:flex; gap:0.5rem; margin-left:auto;">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="button" id="btn-save-permissions-action" class="btn btn-primary">Save Permissions</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: CONFIRM ROLE PROMOTION / DEMOTION
+       ========================================== -->
+  <div id="modal-confirm-role-change" class="modal-overlay">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 id="role-confirm-title" class="modal-title">Confirm Role Change</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="role-confirm-alert" style="background:var(--warning-bg); border:1px solid var(--warning); border-radius:var(--radius-sm); padding:0.75rem; margin-bottom:1rem; font-size:0.85rem; color:#fef3c7; line-height:1.4;">
+        </div>
+        <p id="role-confirm-desc" style="font-size:0.86rem; color:var(--text-secondary); line-height:1.5; margin:0;">
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+        <button type="button" id="btn-confirm-role-action" class="btn btn-primary">Confirm</button>
       </div>
     </div>
   </div>

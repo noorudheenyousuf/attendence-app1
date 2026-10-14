@@ -9,6 +9,7 @@ const Activity = require('../models/Activity');
 const User = require('../models/User');
 const Backup = require('../models/Backup');
 const { logActivity } = require('../utils/logger');
+const { authenticateUser, requirePermission } = require('../middleware/authMiddleware');
 const {
   createBackup,
   validateBackupData,
@@ -72,7 +73,7 @@ router.get('/activities', async (req, res) => {
 });
 
 // CLEAR ATTENDANCE DATA ONLY
-router.delete('/clear-attendance', async (req, res) => {
+router.delete('/clear-attendance', authenticateUser, requirePermission('attendance.clear'), async (req, res) => {
   try {
     const { user, classId } = req.body;
     let query = {};
@@ -89,7 +90,7 @@ router.delete('/clear-attendance', async (req, res) => {
     await logActivity(
       'ATTENDANCE_CLEARED',
       `Attendance data cleared (${count} sessions deleted). Students and classes were preserved.`,
-      user,
+      req.user || user,
       { countDeleted: count }
     );
 
@@ -104,7 +105,7 @@ router.delete('/clear-attendance', async (req, res) => {
 });
 
 // RESET APP BUTTON
-router.post('/reset-app', async (req, res) => {
+router.post('/reset-app', authenticateUser, requirePermission('settings.manage'), async (req, res) => {
   try {
     const { user } = req.body;
 
@@ -113,7 +114,7 @@ router.post('/reset-app', async (req, res) => {
     await createBackup({
       name: `Auto-backup before factory reset (${now.toLocaleString()})`,
       reason: 'pre-reset',
-      createdBy: user || { name: 'Admin', role: 'admin' }
+      createdBy: req.user || user || { name: 'Admin', role: 'admin' }
     });
 
     // Delete all attendance records, students, subjects, classes
@@ -122,7 +123,7 @@ router.post('/reset-app', async (req, res) => {
     await Subject.deleteMany({});
     await Class.deleteMany({});
 
-    await logActivity('APP_RESET', 'Entire application data was reset to factory state by admin (safety backup was preserved)', user);
+    await logActivity('APP_RESET', 'Entire application data was reset to factory state by admin (safety backup was preserved)', req.user || user);
 
     res.json({
       success: true,
@@ -140,13 +141,13 @@ router.post('/reset-app', async (req, res) => {
  * Only proceed with seeding if the backup succeeds; otherwise, return an error and leave data untouched.
  * Requirement 4: Support appending demo records without deleting current data.
  */
-router.post('/seed-sample', async (req, res) => {
+router.post('/seed-sample', authenticateUser, requirePermission('settings.manage'), async (req, res) => {
   try {
     const { user, mode = 'replace' } = req.body;
 
     // Handle append mode (doesn't overwrite real data)
     if (mode === 'append') {
-      const appendResult = await appendDemoData(user);
+      const appendResult = await appendDemoData(req.user || user);
       return res.json(appendResult);
     }
 
@@ -376,13 +377,13 @@ router.get('/backups', async (req, res) => {
 });
 
 // CREATE a manual backup now
-router.post('/backups', async (req, res) => {
+router.post('/backups', authenticateUser, requirePermission('settings.manage'), async (req, res) => {
   try {
     const { name, user } = req.body;
     const backup = await createBackup({
       name: name || `Manual Backup - ${new Date().toLocaleString()}`,
       reason: 'manual',
-      createdBy: user || { name: 'Admin', role: 'admin' }
+      createdBy: req.user || user || { name: 'Admin', role: 'admin' }
     });
     res.json({
       success: true,
@@ -466,7 +467,7 @@ router.get('/backups/:id/download', async (req, res) => {
 });
 
 // RESTORE backup from JSON payload (Requirement 3: "validate before changing any data, keep current safe if fails")
-router.post('/backups/restore', async (req, res) => {
+router.post('/backups/restore', authenticateUser, requirePermission('settings.manage'), async (req, res) => {
   try {
     const { backupData, user } = req.body;
 
@@ -474,7 +475,7 @@ router.post('/backups/restore', async (req, res) => {
       return res.status(400).json({ error: 'No backup data provided in request body.' });
     }
 
-    const result = await restoreBackupData({ backupData, user });
+    const result = await restoreBackupData({ backupData, user: req.user || user });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -482,7 +483,7 @@ router.post('/backups/restore', async (req, res) => {
 });
 
 // RESTORE from an existing saved backup record
-router.post('/backups/:id/restore', async (req, res) => {
+router.post('/backups/:id/restore', authenticateUser, requirePermission('settings.manage'), async (req, res) => {
   try {
     const backup = await Backup.findById(req.params.id);
     if (!backup) {
@@ -497,7 +498,7 @@ router.post('/backups/:id/restore', async (req, res) => {
       attendances: backup.attendances
     };
 
-    const result = await restoreBackupData({ backupData, user });
+    const result = await restoreBackupData({ backupData, user: req.user || user });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -505,7 +506,7 @@ router.post('/backups/:id/restore', async (req, res) => {
 });
 
 // DELETE a saved backup record
-router.delete('/backups/:id', async (req, res) => {
+router.delete('/backups/:id', authenticateUser, requirePermission('settings.manage'), async (req, res) => {
   try {
     const backup = await Backup.findByIdAndDelete(req.params.id);
     if (!backup) {
