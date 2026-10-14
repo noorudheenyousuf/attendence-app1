@@ -40,6 +40,12 @@
     </div>
 
     <div class="header-actions">
+      <!-- Environment Switcher Pill (Requirement 4) -->
+      <button id="btn-env-toggle" class="env-chip-btn" onclick="openModal('modal-environment-switch')" title="Environment: Real School Data vs Isolated Demo Sandbox">
+        <span id="env-toggle-icon">🏫</span>
+        <span id="env-toggle-label">Real Data</span>
+      </button>
+
       <!-- Offline Indicator Chip -->
       <div id="offline-chip" class="offline-chip">
         <span>⚠️</span> Offline
@@ -58,11 +64,6 @@
           <span id="header-user-role" class="role-pill admin">ADMIN</span>
         </div>
       </div>
-
-      <!-- Header Logout Button -->
-      <!-- <button id="btn-header-logout" class="btn btn-sm btn-secondary" title="Log Out" style="margin-left:0.25rem; display:flex; align-items:center; gap:0.3rem; padding:0.4rem 0.6rem;">
-        <span>🚪</span> <span class="hide-mobile">Log Out</span>
-      </button> -->
     </div>
   </header>
 
@@ -84,6 +85,45 @@
       <span class="icon">⚙️</span> Settings
     </button>
   </nav>
+
+  <!-- Persistence Unavailable Warning Banner (Requirement 5) -->
+  <div id="persistence-warning-banner" class="persistence-warning-banner" style="display:none;">
+    <div class="banner-content">
+      <span class="banner-icon">⚠️</span>
+      <div class="banner-text">
+        <strong class="banner-title">In-Memory Mode Active — Storage Is NOT Persistent</strong>
+        <p class="banner-desc">
+          MongoDB is unavailable. School records created in this session are stored temporarily in server RAM and <b>will be lost if the server restarts</b>. Do NOT treat in-memory mode as a safe place for real school data.
+        </p>
+      </div>
+    </div>
+    <div class="banner-actions">
+      <button type="button" class="btn btn-sm btn-warning-action" onclick="downloadBackupExport()">
+        📥 Export Backup Now
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-warning" onclick="openModal('modal-persistence-guide')">
+        ℹ️ Setup MongoDB
+      </button>
+    </div>
+  </div>
+
+  <!-- Demo Sandbox Mode Banner (Requirement 4) -->
+  <div id="demo-sandbox-banner" class="demo-sandbox-banner" style="display:none;">
+    <div class="banner-content">
+      <span class="banner-icon">🎮</span>
+      <div class="banner-text">
+        <strong class="banner-title">Demo Sandbox Active (Isolated Environment)</strong>
+        <p class="banner-desc">
+          You are operating in an isolated demo sandbox. Any changes, test records, or attendance updates here will NOT affect real school records.
+        </p>
+      </div>
+    </div>
+    <div class="banner-actions">
+      <button type="button" class="btn btn-sm btn-secondary" onclick="toggleDemoEnvironment(false)">
+        ↩️ Exit Demo Sandbox
+      </button>
+    </div>
+  </div>
 
   <!-- Main Application Body -->
   <main class="app-main">
@@ -431,13 +471,45 @@
             <div>
               <strong>🌱 Load Demo School Data</strong>
               <div style="font-size:0.8rem; color:var(--text-muted);">
-                Preload 3 classes, 4 subjects, 8 students and 20+ attendance sessions for rapid evaluation.
+                Preload sample classes, subjects, students and attendance. Supports safe append, separate demo sandbox, or replacement with automatic backup.
               </div>
             </div>
-            <button id="btn-seed-sample-action" class="btn btn-success btn-sm">
+            <button id="btn-seed-sample-action" class="btn btn-success btn-sm" onclick="openModal('modal-seed-confirm')">
               🌱 Load Demo School Data
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- System Backups & Disaster Recovery (Requirements 1, 3) -->
+      <div class="card">
+        <div class="section-header" style="margin-bottom:0.5rem;">
+          <h3 style="font-size:1.05rem; font-weight:700;">💾 Backups & Disaster Recovery</h3>
+          <button class="btn btn-secondary btn-sm" onclick="renderBackupsList()">🔄 Refresh</button>
+        </div>
+        <p style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+          Export complete system backups as JSON, restore previous state with safety rollback protection, or download timestamped auto-backups.
+        </p>
+
+        <!-- Backup Action Buttons -->
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+          <button class="btn btn-primary btn-sm" onclick="downloadBackupExport()">
+            📥 Download Backup (.json)
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('file-restore-input').click()">
+            📤 Restore from File (.json)
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="handleCreateManualBackup()">
+            ➕ Create Snapshot Now
+          </button>
+          <input type="file" id="file-restore-input" accept=".json,application/json" style="display:none;" onchange="handleBackupFileSelected(event)">
+        </div>
+
+        <div style="font-size:0.8rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.4rem;">
+          Timestamped Backups & Auto-Snapshots
+        </div>
+        <div id="settings-backups-container" style="max-height:280px; overflow-y:auto;">
+          <!-- Rendered via JS -->
         </div>
       </div>
 
@@ -940,8 +1012,172 @@
         </p>
       </div>
       <div class="modal-footer">
+  <!-- ==========================================
+       MODAL: CONFIRM SEED DEMO DATA (Requirements 1, 2, 4)
+       ========================================== -->
+  <div id="modal-seed-confirm" class="modal-overlay">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--warning);">⚠️ Load Demo School Data</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:var(--warning-bg); border:1px solid var(--warning); border-radius:var(--radius-sm); padding:0.85rem; margin-bottom:1rem; color:#fef3c7; font-size:0.88rem; line-height:1.5;">
+          <strong>Attention:</strong> Loading demo data in replacement mode will <b>replace your current school data</b> (all classes, students, subjects, and attendance records).
+        </div>
+
+        <p style="font-size:0.86rem; color:var(--text-secondary); line-height:1.5; margin-bottom:1rem;">
+          To keep your school data safe, choose how you would like to proceed:
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1rem;">
+          <!-- Option A: Append (Safe) -->
+          <div style="padding:0.75rem; background:var(--bg-input); border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <div>
+              <strong style="color:var(--success);">🌱 Add Demo Records (Keep Current Data Safe)</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
+                Adds sample classes and students alongside your existing data. Nothing is deleted!
+              </div>
+            </div>
+            <button type="button" id="btn-seed-append-safe" class="btn btn-secondary btn-sm" style="border-color:var(--success); color:var(--success);">
+              Add Without Overwriting
+            </button>
+          </div>
+
+          <!-- Option B: Sandbox Mode -->
+          <div style="padding:0.75rem; background:var(--bg-input); border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <div>
+              <strong style="color:#c4b5fd;">🎮 Switch to Demo Sandbox Mode</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
+                Explore demo data in a completely isolated sandbox. Real data is hidden and untouched.
+              </div>
+            </div>
+            <button type="button" id="btn-seed-switch-sandbox" class="btn btn-secondary btn-sm" style="border-color:#8b5cf6; color:#c4b5fd;">
+              Open Demo Sandbox
+            </button>
+          </div>
+
+          <!-- Option C: Replace with backup -->
+          <div style="padding:0.75rem; background:var(--bg-input); border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <div>
+              <strong style="color:var(--warning);">💾 Replace All With Demo Data (Auto-Backup)</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">
+                Creates a timestamped backup first. Seeding only proceeds if the backup succeeds!
+              </div>
+            </div>
+            <button type="button" id="btn-seed-backup-and-replace" class="btn btn-primary btn-sm">
+              Back up and continue
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content:flex-end;">
         <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-        <button type="button" id="btn-reset-app-action" class="btn btn-danger">Proceed With Factory Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: CONFIRM RESTORE BACKUP (Requirement 3)
+       ========================================== -->
+  <div id="modal-restore-confirm" class="modal-overlay">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--info);">📤 Confirm Backup Restoration</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:var(--info-bg); border:1px solid var(--info); border-radius:var(--radius-sm); padding:0.75rem; margin-bottom:1rem; font-size:0.85rem; color:var(--text-primary); line-height:1.4;">
+          <strong>Backup File Verified ✓</strong>
+          <div id="restore-preview-details" style="margin-top:0.4rem; font-size:0.8rem; line-height:1.5;"></div>
+        </div>
+
+        <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5; margin-bottom:0.75rem;">
+          <b>Safety Protection Active:</b> An automatic safety backup of your current school data will be taken immediately before restoration starts. If anything fails during restore, the previous data will be safely rolled back.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+        <button type="button" id="btn-restore-proceed" class="btn btn-primary">Proceed with Restore</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: ENVIRONMENT SWITCHER (Requirement 4)
+       ========================================== -->
+  <div id="modal-environment-switch" class="modal-overlay">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🔄 Switch Environment</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+          Select the active database mode. Demo sandbox provides a safe environment where you can test features without touching real school records.
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+          <div style="padding:0.75rem; background:var(--bg-input); border-radius:var(--radius-md); border:1px solid var(--border-color); cursor:pointer;" onclick="toggleDemoEnvironment(false)">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong>🏫 Real School Data</strong>
+              <span id="env-badge-real" class="role-pill" style="background:var(--success-bg); color:var(--success);">ACTIVE</span>
+            </div>
+            <p style="font-size:0.78rem; color:var(--text-muted); margin:0.3rem 0 0;">
+              Production environment with your school's official classes, students, and attendance.
+            </p>
+          </div>
+
+          <div style="padding:0.75rem; background:var(--bg-input); border-radius:var(--radius-md); border:1px solid var(--border-color); cursor:pointer;" onclick="toggleDemoEnvironment(true)">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong>🎮 Demo Sandbox Mode</strong>
+              <span id="env-badge-demo" class="role-pill" style="display:none; background:rgba(139, 92, 246, 0.2); color:#c4b5fd;">ACTIVE</span>
+            </div>
+            <p style="font-size:0.78rem; color:var(--text-muted); margin:0.3rem 0 0;">
+              Preloaded demo database for testing, exploring reports, and training staff without altering real data.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: MONGODB PERSISTENCE GUIDE (Requirement 5)
+       ========================================== -->
+  <div id="modal-persistence-guide" class="modal-overlay">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Persistent Storage Configuration</h3>
+        <button class="btn-icon" data-close-modal>✕</button>
+      </div>
+      <div class="modal-body" style="font-size:0.86rem; line-height:1.6; color:var(--text-secondary);">
+        <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:var(--radius-sm); padding:0.75rem; margin-bottom:1rem; color:#fee2e2;">
+          <strong>⚠️ In-Memory Mode Warning:</strong>
+          <br>Hajar App is currently operating in in-memory mode because MongoDB is disconnected. Records entered in this mode reside in server memory and <b>disappear on server restart</b>.
+        </div>
+
+        <h4 style="color:var(--text-primary); font-size:0.95rem; margin-bottom:0.4rem;">How to Enable Persistent Storage:</h4>
+        <ol style="padding-left:1.25rem; margin-bottom:1rem;">
+          <li>Create a free cloud database cluster at <a href="https://cloud.mongodb.com" target="_blank" rel="noopener" style="color:var(--primary-500); text-decoration:underline;">MongoDB Atlas</a>.</li>
+          <li>In MongoDB Atlas: under <b>Security > Network Access</b>, allow access from IP <code style="background:var(--bg-input); padding:2px 4px; border-radius:4px;">0.0.0.0/0</code>.</li>
+          <li>Under <b>Database Access</b>, create a database user and password.</li>
+          <li>Copy your connection URI and update <code style="background:var(--bg-input); padding:2px 4px; border-radius:4px;">MONGODB_URI</code> in your <code style="background:var(--bg-input); padding:2px 4px; border-radius:4px;">.env</code> file:
+            <pre style="background:var(--bg-input); padding:0.6rem; border-radius:var(--radius-sm); margin:0.4rem 0; overflow-x:auto; font-size:0.78rem;">MONGODB_URI=mongodb+srv://&lt;username&gt;:&lt;password&gt;@cluster0.mongodb.net/hajar_app</pre>
+          </li>
+          <li>Or run local MongoDB: <code style="background:var(--bg-input); padding:2px 4px; border-radius:4px;">mongodb://127.0.0.1:27017/hajar_app</code></li>
+        </ol>
+
+        <p style="font-size:0.8rem; color:var(--text-muted); margin:0;">
+          💡 Tip: You can export your current data anytime using <b>Export Backup</b> in Settings and restore it once your MongoDB database is connected.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>Close</button>
+        <button type="button" class="btn btn-primary" onclick="downloadBackupExport(); closeModal('modal-persistence-guide');">📥 Export Backup Now</button>
       </div>
     </div>
   </div>

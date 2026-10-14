@@ -894,3 +894,193 @@ body {
     padding: 0.5rem;
   }
 }
+
+/* ==========================================================================
+   Persistence & Demo Sandbox Warning Banners (Requirements 4, 5)
+   ========================================================================== */
+.persistence-warning-banner {
+  background: linear-gradient(90deg, #7c2d12, #991b1b);
+  color: #fef2f2;
+  border-bottom: 2px solid #ef4444;
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 40;
+}
+
+.persistence-warning-banner .banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 260px;
+}
+
+.persistence-warning-banner .banner-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.persistence-warning-banner .banner-title {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+}
+
+.persistence-warning-banner .banner-desc {
+  font-size: 0.8rem;
+  color: #fecaca;
+  margin: 0.2rem 0 0;
+  line-height: 1.4;
+}
+
+.persistence-warning-banner .banner-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-warning-action {
+  background: #ffffff;
+  color: #7f1d1d !important;
+  font-weight: 700;
+  border: 1px solid #ffffff;
+}
+
+.btn-warning-action:hover {
+  background: #fee2e2;
+}
+
+.btn-outline-warning {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.btn-outline-warning:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #ffffff;
+}
+
+/* Demo Sandbox Banner */
+.demo-sandbox-banner {
+  background: linear-gradient(90deg, #3b0764, #4c1d95);
+  color: #f5f3ff;
+  border-bottom: 2px solid #8b5cf6;
+  padding: 0.65rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  position: relative;
+  z-index: 39;
+}
+
+.demo-sandbox-banner .banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 240px;
+}
+
+.demo-sandbox-banner .banner-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.demo-sandbox-banner .banner-desc {
+  font-size: 0.78rem;
+  color: #ddd6fe;
+  margin: 0;
+}
+
+/* Environment Toggle Chip in Header */
+.env-chip-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.env-chip-btn.demo-active {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: #8b5cf6;
+  color: #c4b5fd;
+}
+
+.env-chip-btn:hover {
+  border-color: var(--primary-500);
+}
+
+/* Backups List Items in Settings */
+.backup-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.6rem;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.backup-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.backup-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.backup-pills {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.backup-pill {
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+.backup-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+

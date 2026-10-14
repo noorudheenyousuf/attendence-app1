@@ -6,9 +6,14 @@ const API_BASE = '/api';
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
+  
+  // Resolve current active environment (real vs demo)
+  const currentEnv = (window.state && window.state.environment) || localStorage.getItem('hajar_env') || 'real';
+
   const config = {
     headers: {
       'Content-Type': 'application/json',
+      'X-Environment': currentEnv,
       ...options.headers
     },
     ...options
@@ -33,6 +38,11 @@ async function request(endpoint, options = {}) {
 }
 
 const api = {
+  // System Health
+  health: {
+    get: () => request('/health')
+  },
+
   // Classes
   classes: {
     getAll: () => request('/classes'),
@@ -92,8 +102,21 @@ const api = {
       request('/settings/clear-attendance', { method: 'DELETE', body: { classId, user } }),
     resetApp: (user) => 
       request('/settings/reset-app', { method: 'POST', body: { user } }),
-    seedSample: (user) => 
-      request('/settings/seed-sample', { method: 'POST', body: { user } })
+    seedSample: (user, options = {}) => 
+      request('/settings/seed-sample', { method: 'POST', body: { user, ...options } }),
+
+    // Backups & Disaster Recovery (Requirements 1, 3)
+    getBackups: () => request('/settings/backups'),
+    createBackup: (name, user) => 
+      request('/settings/backups', { method: 'POST', body: { name, user } }),
+    getExportBackupUrl: () => `${API_BASE}/settings/backups/export`,
+    getDownloadBackupUrl: (id) => `${API_BASE}/settings/backups/${id}/download`,
+    restoreBackup: (backupData, user) => 
+      request('/settings/backups/restore', { method: 'POST', body: { backupData, user } }),
+    restoreBackupById: (id, user) => 
+      request(`/settings/backups/${id}/restore`, { method: 'POST', body: { user } }),
+    deleteBackup: (id) => 
+      request(`/settings/backups/${id}`, { method: 'DELETE' })
   },
 
   // Auth & Roles

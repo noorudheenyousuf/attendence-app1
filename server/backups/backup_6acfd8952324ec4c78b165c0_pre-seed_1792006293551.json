@@ -1,0 +1,1155 @@
+{
+  "name": "Pre-Demo Seed Backup (2026-10-14T19-31-33-550Z)",
+  "reason": "pre-seed",
+  "timestamp": "2026-10-14T19:31:33.551Z",
+  "createdBy": {
+    "name": "Admin Test",
+    "email": "",
+    "role": "admin"
+  },
+  "classes": [
+    {
+      "_id": "6acf0fea7ade835a687d29d7",
+      "name": "Grade 10",
+      "section": "A",
+      "academicYear": "2026",
+      "description": "Senior Secondary Science & Maths",
+      "createdAt": "2026-10-14T05:15:22.043Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29d8",
+      "name": "Grade 10",
+      "section": "B",
+      "academicYear": "2026",
+      "description": "Senior Secondary Arts & Commerce",
+      "createdAt": "2026-10-14T05:15:22.046Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29d9",
+      "name": "Grade 9",
+      "section": "A",
+      "academicYear": "2026",
+      "description": "Junior High",
+      "createdAt": "2026-10-14T05:15:22.047Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acfd8952324ec4c78b165be",
+      "name": "Grade 12",
+      "section": "SPECIAL",
+      "academicYear": "2026",
+      "description": "",
+      "createdAt": "2026-10-14T19:31:33.532Z",
+      "__v": 0
+    }
+  ],
+  "subjects": [
+    {
+      "_id": "6acf0fea7ade835a687d29da",
+      "name": "Mathematics",
+      "code": "MATH101",
+      "classes": [
+        "6acf0fea7ade835a687d29d7",
+        "6acf0fea7ade835a687d29d8",
+        "6acf0fea7ade835a687d29d9"
+      ],
+      "createdAt": "2026-10-14T05:15:22.049Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29db",
+      "name": "Science & Physics",
+      "code": "SCI102",
+      "classes": [
+        "6acf0fea7ade835a687d29d7",
+        "6acf0fea7ade835a687d29d8"
+      ],
+      "createdAt": "2026-10-14T05:15:22.051Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29dc",
+      "name": "English Language",
+      "code": "ENG103",
+      "classes": [
+        "6acf0fea7ade835a687d29d7",
+        "6acf0fea7ade835a687d29d8",
+        "6acf0fea7ade835a687d29d9"
+      ],
+      "createdAt": "2026-10-14T05:15:22.052Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29dd",
+      "name": "World History",
+      "code": "HIS104",
+      "classes": [
+        "6acf0fea7ade835a687d29d8",
+        "6acf0fea7ade835a687d29d9"
+      ],
+      "createdAt": "2026-10-14T05:15:22.054Z",
+      "__v": 0
+    }
+  ],
+  "students": [
+    {
+      "_id": "6acf0fea7ade835a687d29de",
+      "name": "Amina Al-Hajar",
+      "rollNo": "10A-01",
+      "classId": "6acf0fea7ade835a687d29d7",
+      "gender": "Female",
+      "parentContact": "+1 555-0101",
+      "parentName": "Fatima Al-Hajar",
+      "email": "amina@example.com",
+      "address": "",
+      "isActive": true,
+      "admissionDate": "2026-10-14T05:15:22.055Z",
+      "createdAt": "2026-10-14T05:15:22.055Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29df",
+      "name": "Bilal Tariq",
+      "rollNo": "10A-02",
+      "classId": "6acf0fea7ade835a687d29d7",
+      "gender": "Male",
+      "parentContact": "+1 555-0102",
+      "parentName": "Tariq Mansoor",
+      "email": "bilal@example.com",
+      "address": "",
+      "isActive": true,
+      "admissionDate": "2026-10-14T05:15:22.057Z",
+      "createdAt": "2026-10-14T05:15:22.057Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29e0",
+      "name": "Chirag Sharma",
+      "rollNo": "10A-03",
+      "classId": "6acf0fea7ade835a687d29d7",
+      "gender": "Male",
+      "parentContact": "+1 555-0103",
+      "parentName": "Raj Sharma",
+      "email": "chirag@example.com",
+      "address": "",
+      "isActive": true,
+      "admissionDate": "2026-10-14T05:15:22.058Z",
+      "createdAt": "2026-10-14T05:15:22.058Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29e1",
+      "name": "Diana Prince",
+      "rollNo": "10A-04",
+      "classId": "6acf0fea7ade835a687d29d7",
+      "gender": "Female",
+      "parentContact": "+1 555-0104",
+      "parentName": "Hippolyta Prince",
+      "email": "diana@example.com",
+      "address": "",
+      "isActive": true,
+      "admissionDate": "2026-10-14T05:15:22.060Z",
+      "createdAt": "2026-10-14T05:15:22.060Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29e2",
+      "name": "Ebrahim Zaid",
+      "rollNo": "10A-05",
+      "classId": "6acf0fea7ade835a687d29d7",
+      "gender": "Male",
+      "parentContact": "+1 555-0105",
+      "parentName": "Zaid Omar",
+      "email": "ebrahim@example.com",
+      "address": "",
+      "isActive": true,
+      "admissionDate": "2026-10-14T05:15:22.061Z",
+      "createdAt": "2026-10-14T05:15:22.061Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29e3",
+      "name": "Fatima Zahra",
+      "rollNo": "10A-06",
+      "classId": "6acf0fea7ade835a687d29d7",
+      "gender": "Female",
+      "parentContact": "+1 555-0106",
+      "parentName": "Ali Raza",
+      "email": "fatima@example.com",
+      "address": "",
+      "isActive": true,
+      "admissionDate": "2026-10-14T05:15:22.063Z",
+      "createdAt": "2026-10-14T05:15:22.063Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29e4",
+      "name": "Ghufran Malik",
+      "rollNo": "10A-07",
+      "classId": "6acf0fea7ade835a687d29d7",
+      "gender": "Male",
+      "parentContact": "+1 555-0107",
+      "parentName": "Malik Akbar",
+      "email": "ghufran@example.com",
+      "address": "",
+      "isActive": true,
+      "admissionDate": "2026-10-14T05:15:22.064Z",
+      "createdAt": "2026-10-14T05:15:22.065Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29e5",
+      "name": "Hajar Noora",
+      "rollNo": "10A-08",
+      "classId": "6acf0fea7ade835a687d29d7",
+      "gender": "Female",
+      "parentContact": "+1 555-0108",
+      "parentName": "Noorudheen",
+      "email": "hajar.noora@example.com",
+      "address": "",
+      "isActive": true,
+      "admissionDate": "2026-10-14T05:15:22.066Z",
+      "createdAt": "2026-10-14T05:15:22.066Z",
+      "__v": 0
+    }
+  ],
+  "attendances": [
+    {
+      "_id": "6acf0fea7ade835a687d29e6",
+      "date": "2026-10-05",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29da",
+      "markedByName": "Prof. Noorudheen",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "absent",
+          "remarks": "Sick leave"
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 7,
+      "absentCount": 1,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.069Z",
+      "updatedAt": "2026-10-14T05:15:22.069Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29e7",
+      "date": "2026-10-05",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29db",
+      "markedByName": "Dr. Sarah",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "absent",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 7,
+      "absentCount": 1,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.073Z",
+      "updatedAt": "2026-10-14T05:15:22.073Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29e8",
+      "date": "2026-10-06",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29da",
+      "markedByName": "Prof. Noorudheen",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "absent",
+          "remarks": "Sick leave"
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 7,
+      "absentCount": 1,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.076Z",
+      "updatedAt": "2026-10-14T05:15:22.076Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29e9",
+      "date": "2026-10-06",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29db",
+      "markedByName": "Dr. Sarah",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.079Z",
+      "updatedAt": "2026-10-14T05:15:22.079Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29ea",
+      "date": "2026-10-07",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29da",
+      "markedByName": "Prof. Noorudheen",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.081Z",
+      "updatedAt": "2026-10-14T05:15:22.081Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29eb",
+      "date": "2026-10-07",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29db",
+      "markedByName": "Dr. Sarah",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.084Z",
+      "updatedAt": "2026-10-14T05:15:22.084Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29ec",
+      "date": "2026-10-08",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29da",
+      "markedByName": "Prof. Noorudheen",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "late",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 7,
+      "absentCount": 0,
+      "lateCount": 1,
+      "createdAt": "2026-10-14T05:15:22.088Z",
+      "updatedAt": "2026-10-14T05:15:22.088Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29ed",
+      "date": "2026-10-08",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29db",
+      "markedByName": "Dr. Sarah",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.091Z",
+      "updatedAt": "2026-10-14T05:15:22.091Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29ee",
+      "date": "2026-10-09",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29da",
+      "markedByName": "Prof. Noorudheen",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.094Z",
+      "updatedAt": "2026-10-14T05:15:22.094Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29ef",
+      "date": "2026-10-09",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29db",
+      "markedByName": "Dr. Sarah",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.097Z",
+      "updatedAt": "2026-10-14T05:15:22.097Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29f0",
+      "date": "2026-10-12",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29da",
+      "markedByName": "Prof. Noorudheen",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.100Z",
+      "updatedAt": "2026-10-14T05:15:22.100Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29f1",
+      "date": "2026-10-12",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29db",
+      "markedByName": "Dr. Sarah",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.103Z",
+      "updatedAt": "2026-10-14T05:15:22.103Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29f2",
+      "date": "2026-10-13",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29da",
+      "markedByName": "Prof. Noorudheen",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.107Z",
+      "updatedAt": "2026-10-14T05:15:22.107Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29f3",
+      "date": "2026-10-13",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29db",
+      "markedByName": "Dr. Sarah",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.110Z",
+      "updatedAt": "2026-10-14T05:15:22.110Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29f4",
+      "date": "2026-10-14",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29da",
+      "markedByName": "Prof. Noorudheen",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 8,
+      "absentCount": 0,
+      "lateCount": 0,
+      "createdAt": "2026-10-14T05:15:22.114Z",
+      "updatedAt": "2026-10-14T05:15:22.114Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acf0fea7ade835a687d29f5",
+      "date": "2026-10-14",
+      "year": 2026,
+      "month": 10,
+      "classId": "6acf0fea7ade835a687d29d7",
+      "subjectId": "6acf0fea7ade835a687d29db",
+      "markedByName": "Dr. Sarah",
+      "records": [
+        {
+          "studentId": "6acf0fea7ade835a687d29de",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29df",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e0",
+          "status": "late",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e1",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e2",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e3",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e4",
+          "status": "present",
+          "remarks": ""
+        },
+        {
+          "studentId": "6acf0fea7ade835a687d29e5",
+          "status": "present",
+          "remarks": ""
+        }
+      ],
+      "totalStudents": 8,
+      "presentCount": 7,
+      "absentCount": 0,
+      "lateCount": 1,
+      "createdAt": "2026-10-14T05:15:22.116Z",
+      "updatedAt": "2026-10-14T05:15:22.116Z",
+      "__v": 0
+    }
+  ],
+  "counts": {
+    "classes": 4,
+    "subjects": 4,
+    "students": 8,
+    "attendances": 16
+  },
+  "createdAt": "2026-10-14T19:31:33.551Z"
+}

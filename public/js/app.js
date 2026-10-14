@@ -6,6 +6,7 @@
 const state = {
   activeTab: 'attendance',
   theme: localStorage.getItem('hajar_theme') || 'dark',
+  environment: localStorage.getItem('hajar_env') || 'real',
   currentUser: JSON.parse(localStorage.getItem('hajar_user')) || null,
   classes: [],
   subjects: [],
@@ -27,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   setupEventListeners();
   setupPWA();
+  await checkPersistenceHealth();
   await loadUserData();
   await loadCoreData();
 
@@ -1139,18 +1141,36 @@ async function renderSettingsView() {
     }
   }
 
-  // Populate system diagnostics
+  // Populate system diagnostics (Requirement 5)
   try {
     const stats = await api.settings.getStats();
     const statEl = document.getElementById('settings-system-stats');
     if (statEl) {
+      const isPersistent = stats.isPersistent;
+      const modeColor = isPersistent ? 'var(--success)' : 'var(--danger)';
+      const modeText = isPersistent ? 'Persistent Storage (MongoDB Connected)' : 'Non-Persistent (In-Memory RAM Mode)';
+
       statEl.innerHTML = `
         <div style="font-size:0.85rem; line-height:1.7;">
-          <div>Database Status: <b style="color:var(--success)">${stats.dbStatus}</b></div>
+          <div>Storage Engine: <b style="color:${modeColor}">${modeText}</b></div>
+          <div>Database Status: <b>${stats.dbStatus}</b></div>
+          ${!isPersistent ? `
+            <div style="margin:0.4rem 0; padding:0.6rem 0.8rem; background:var(--danger-bg); border-left:3px solid var(--danger); border-radius:var(--radius-sm); font-size:0.8rem; color:#fee2e2;">
+              ⚠️ <b>Warning:</b> Persistence is unavailable. In-memory data will disappear when the server restarts. Do NOT use in-memory mode for real production school data.
+              <div style="margin-top:0.3rem;">
+                <a href="javascript:void(0)" onclick="openModal('modal-persistence-guide')" style="color:#fecaca; text-decoration:underline;">Click here to configure persistent MongoDB</a>
+              </div>
+            </div>
+          ` : `
+            <div style="margin:0.4rem 0; padding:0.5rem 0.8rem; background:var(--success-bg); border-left:3px solid var(--success); border-radius:var(--radius-sm); font-size:0.8rem; color:#d1fae5;">
+              ✓ <b>Safe & Persistent:</b> Data is safely persisted in MongoDB.
+            </div>
+          `}
           <div>Total Classes: <b>${stats.totalClasses}</b></div>
           <div>Total Subjects: <b>${stats.totalSubjects}</b></div>
           <div>Total Active Students: <b>${stats.totalStudents}</b></div>
           <div>Recorded Attendance Sessions: <b>${stats.totalAttendanceSessions}</b></div>
+          <div>Saved System Backups: <b>${stats.totalBackups || 0}</b></div>
           <div>Application Version: <b>v${stats.version}</b> (PWA Enabled)</div>
         </div>
       `;
@@ -1158,6 +1178,9 @@ async function renderSettingsView() {
   } catch (err) {
     console.warn('Stats fetch notice:', err.message);
   }
+
+  // Render Saved Backups list (Requirement 3)
+  await renderBackupsList();
 
   // Hook Clear Attendance Only button
   const btnClearAtt = document.getElementById('btn-clear-attendance-action');
@@ -1183,7 +1206,7 @@ async function renderSettingsView() {
   const btnResetApp = document.getElementById('btn-reset-app-action');
   if (btnResetApp) {
     btnResetApp.onclick = async () => {
-      const confirmation = prompt('DANGER ZONE: Type "RESET" to confirm complete wipe of all students, classes, subjects, and attendance records:');
+      const confirmation = prompt('DANGER ZONE: Type "RESET" to confirm wipe of all students, classes, subjects, and attendance records:');
       if (confirmation !== 'RESET') {
         return showToast('Reset cancelled', 'info');
       }
@@ -1200,27 +1223,292 @@ async function renderSettingsView() {
     };
   }
 
-  // Hook Seed Sample Data button
-  const btnSeed = document.getElementById('btn-seed-sample-action');
-  if (btnSeed) {
-    btnSeed.onclick = async () => {
+  // Hook Seed Confirmation Modal Buttons (Requirements 1, 2, 4)
+  const btnBackupAndReplace = document.getElementById('btn-seed-backup-and-replace');
+  if (btnBackupAndReplace) {
+    btnBackupAndReplace.onclick = async () => {
       try {
-        btnSeed.disabled = true;
-        btnSeed.textContent = 'Loading Sample Data...';
-        const res = await api.settings.seedSample(state.currentUser);
+        btnBackupAndReplace.disabled = true;
+        btnBackupAndReplace.textContent = 'Backing up & loading demo data...';
+        const res = await api.settings.seedSample(state.currentUser, { mode: 'replace' });
         showToast(res.message, 'success');
+        closeModal('modal-seed-confirm');
         await loadCoreData();
         renderSettingsView();
         switchTab('attendance');
       } catch (err) {
         showToast(`Seed failed: ${err.message}`, 'error');
       } finally {
-        btnSeed.disabled = false;
-        btnSeed.textContent = '🌱 Load Demo School Data';
+        btnBackupAndReplace.disabled = false;
+        btnBackupAndReplace.textContent = 'Back up and continue';
       }
     };
   }
+
+  const btnAppendSafe = document.getElementById('btn-seed-append-safe');
+  if (btnAppendSafe) {
+    btnAppendSafe.onclick = async () => {
+      try {
+        btnAppendSafe.disabled = true;
+        btnAppendSafe.textContent = 'Adding demo records...';
+        const res = await api.settings.seedSample(state.currentUser, { mode: 'append' });
+        showToast(res.message, 'success');
+        closeModal('modal-seed-confirm');
+        await loadCoreData();
+        renderSettingsView();
+        switchTab('attendance');
+      } catch (err) {
+        showToast(`Append failed: ${err.message}`, 'error');
+      } finally {
+        btnAppendSafe.disabled = false;
+        btnAppendSafe.textContent = 'Add Without Overwriting';
+      }
+    };
+  }
+
+  const btnSwitchSandbox = document.getElementById('btn-seed-switch-sandbox');
+  if (btnSwitchSandbox) {
+    btnSwitchSandbox.onclick = () => {
+      closeModal('modal-seed-confirm');
+      toggleDemoEnvironment(true);
+    };
+  }
 }
+
+// ==========================================
+// Persistence & Health Monitoring (Requirement 5)
+// ==========================================
+window.checkPersistenceHealth = async function() {
+  try {
+    const health = await api.health.get();
+    const persistenceBanner = document.getElementById('persistence-warning-banner');
+    if (persistenceBanner) {
+      // Requirement 5: Display a clear warning when persistence is unavailable
+      if (!health.isPersistent) {
+        persistenceBanner.style.display = 'flex';
+      } else {
+        persistenceBanner.style.display = 'none';
+      }
+    }
+
+    // Update demo sandbox banner and environment UI
+    const demoBanner = document.getElementById('demo-sandbox-banner');
+    const envChip = document.getElementById('btn-env-toggle');
+    const envIcon = document.getElementById('env-toggle-icon');
+    const envLabel = document.getElementById('env-toggle-label');
+    const badgeReal = document.getElementById('env-badge-real');
+    const badgeDemo = document.getElementById('env-badge-demo');
+
+    const isDemo = state.environment === 'demo';
+
+    if (demoBanner) demoBanner.style.display = isDemo ? 'flex' : 'none';
+    if (envChip) envChip.classList.toggle('demo-active', isDemo);
+    if (envIcon) envIcon.textContent = isDemo ? '🎮' : '🏫';
+    if (envLabel) envLabel.textContent = isDemo ? 'Demo Sandbox' : 'Real Data';
+    if (badgeReal) badgeReal.style.display = isDemo ? 'none' : 'inline-block';
+    if (badgeDemo) badgeDemo.style.display = isDemo ? 'inline-block' : 'none';
+
+    return health;
+  } catch (err) {
+    console.warn('[Health check notice]:', err.message);
+  }
+};
+
+// ==========================================
+// Demo Environment Switching (Requirement 4)
+// ==========================================
+window.toggleDemoEnvironment = async function(isDemo) {
+  state.environment = isDemo ? 'demo' : 'real';
+  localStorage.setItem('hajar_env', state.environment);
+  closeModal('modal-environment-switch');
+
+  await checkPersistenceHealth();
+  await loadCoreData();
+
+  if (state.activeTab === 'settings') {
+    renderSettingsView();
+  } else if (state.activeTab === 'attendance') {
+    initAttendanceView();
+  }
+
+  if (isDemo) {
+    showToast('🎮 Switched to Demo Sandbox. Real school data is isolated and safe.', 'info');
+  } else {
+    showToast('🏫 Switched to Real School Data.', 'success');
+  }
+};
+
+// ==========================================
+// Backup Export, Download, and Restore (Requirement 3)
+// ==========================================
+let pendingRestoreData = null;
+
+window.downloadBackupExport = function() {
+  const downloadUrl = api.settings.getExportBackupUrl();
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.setAttribute('download', `hajar_backup_${new Date().toISOString().slice(0, 10)}.json`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast('📥 Starting backup file export download...', 'info');
+};
+
+window.handleCreateManualBackup = async function() {
+  const name = prompt('Enter a label for this backup snapshot (optional):', `Manual Backup - ${new Date().toLocaleDateString()}`);
+  if (name === null) return; // User cancelled
+  try {
+    const res = await api.settings.createBackup(name, state.currentUser);
+    showToast(res.message || 'Backup created successfully!', 'success');
+    renderBackupsList();
+  } catch (err) {
+    showToast(`Backup failed: ${err.message}`, 'error');
+  }
+};
+
+window.handleBackupFileSelected = function(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      const data = parsed.data || parsed;
+
+      // Validate structure before opening confirm
+      if (!Array.isArray(data.classes) || !Array.isArray(data.students) || !Array.isArray(data.subjects) || !Array.isArray(data.attendances)) {
+        event.target.value = '';
+        return showToast('Invalid backup file: File does not contain classes, students, subjects, or attendance arrays.', 'error');
+      }
+
+      pendingRestoreData = parsed;
+
+      const previewEl = document.getElementById('restore-preview-details');
+      if (previewEl) {
+        previewEl.innerHTML = `
+          <div><b>File:</b> ${escapeHtml(file.name)} (${(file.size / 1024).toFixed(1)} KB)</div>
+          <div><b>Classes:</b> ${data.classes.length} | <b>Subjects:</b> ${data.subjects.length} | <b>Students:</b> ${data.students.length} | <b>Attendance Sessions:</b> ${data.attendances.length}</div>
+          <div><b>Created:</b> ${escapeHtml(parsed.exportedAt || parsed.timestamp || 'N/A')}</div>
+        `;
+      }
+
+      const proceedBtn = document.getElementById('btn-restore-proceed');
+      if (proceedBtn) {
+        proceedBtn.onclick = async () => {
+          proceedBtn.disabled = true;
+          proceedBtn.textContent = 'Restoring and verifying...';
+          try {
+            const res = await api.settings.restoreBackup(pendingRestoreData, state.currentUser);
+            showToast(res.message || 'Backup successfully restored!', 'success');
+            closeModal('modal-restore-confirm');
+            await loadCoreData();
+            renderSettingsView();
+            switchTab('attendance');
+          } catch (err) {
+            showToast(`Restore failed: ${err.message}`, 'error');
+          } finally {
+            proceedBtn.disabled = false;
+            proceedBtn.textContent = 'Proceed with Restore';
+          }
+        };
+      }
+
+      openModal('modal-restore-confirm');
+    } catch (parseErr) {
+      showToast(`Invalid JSON file: ${parseErr.message}`, 'error');
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  reader.readAsText(file);
+};
+
+window.restoreBackupById = async function(id, name) {
+  if (!confirm(`Are you sure you want to restore backup "${name}"?\n\nSafety Note: A pre-restore safety backup of current data will be created first, and data will automatically roll back if restoration encounters any issue.`)) {
+    return;
+  }
+
+  try {
+    showToast(`Restoring backup "${name}"...`, 'info');
+    const res = await api.settings.restoreBackupById(id, state.currentUser);
+    showToast(res.message || 'Backup restored successfully!', 'success');
+    await loadCoreData();
+    renderSettingsView();
+    switchTab('attendance');
+  } catch (err) {
+    showToast(`Restore failed: ${err.message}`, 'error');
+  }
+};
+
+window.deleteBackupById = async function(id, name) {
+  if (!confirm(`Are you sure you want to delete backup snapshot "${name}"?`)) return;
+  try {
+    const res = await api.settings.deleteBackup(id);
+    showToast(res.message || 'Backup removed', 'success');
+    renderBackupsList();
+  } catch (err) {
+    showToast(`Failed to delete backup: ${err.message}`, 'error');
+  }
+};
+
+window.renderBackupsList = async function() {
+  const container = document.getElementById('settings-backups-container');
+  if (!container) return;
+
+  try {
+    const backups = await api.settings.getBackups();
+    if (!backups || backups.length === 0) {
+      container.innerHTML = `
+        <div style="padding:1rem; text-align:center; color:var(--text-muted); font-size:0.85rem; background:var(--bg-input); border-radius:var(--radius-sm); border:1px dashed var(--border-color);">
+          No saved backup snapshots yet. Click <b>"Create Snapshot Now"</b> or load demo data to create an auto-backup.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = backups.map(b => {
+      const dateStr = new Date(b.timestamp).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const counts = b.counts || {};
+      const reasonTag = b.reason === 'pre-seed' ? 'AUTO (PRE-DEMO SEED)' : (b.reason === 'pre-restore' ? 'AUTO (PRE-RESTORE SAFETY)' : 'MANUAL');
+      const reasonColor = b.reason === 'pre-seed' ? '#f59e0b' : (b.reason === 'pre-restore' ? '#0ea5e9' : 'var(--text-secondary)');
+
+      return `
+        <div class="backup-item">
+          <div style="flex:1; min-width:240px;">
+            <div class="backup-title">
+              <span>💾</span>
+              <span>${escapeHtml(b.name)}</span>
+            </div>
+            <div class="backup-meta">
+              <span style="color:${reasonColor}; font-weight:700;">[${reasonTag}]</span> • Created ${dateStr} by ${escapeHtml(b.createdBy?.name || 'Admin')}
+            </div>
+            <div class="backup-pills">
+              <span class="backup-pill">🏫 ${counts.classes || 0} classes</span>
+              <span class="backup-pill">📚 ${counts.subjects || 0} subjects</span>
+              <span class="backup-pill">👨‍🎓 ${counts.students || 0} students</span>
+              <span class="backup-pill">📋 ${counts.attendances || 0} sessions</span>
+            </div>
+          </div>
+          <div class="backup-actions">
+            <a class="btn btn-secondary btn-sm" href="${api.settings.getDownloadBackupUrl(b._id)}" download title="Download this backup file">
+              📥 Download
+            </a>
+            <button class="btn btn-primary btn-sm" onclick="restoreBackupById('${b._id}', '${escapeHtml(b.name).replace(/'/g, "\\'")}')" title="Restore this backup">
+              🔄 Restore
+            </button>
+            <button class="btn btn-icon" style="color:var(--danger);" onclick="deleteBackupById('${b._id}', '${escapeHtml(b.name).replace(/'/g, "\\'")}')" title="Delete snapshot">
+              🗑️
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = `<p style="color:var(--danger); font-size:0.85rem;">Failed to load backups: ${err.message}</p>`;
+  }
+};
 
 // User Switching: Admin vs Teacher (Multi-User testing)
 window.switchUserRole = async function(role) {

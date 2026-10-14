@@ -1,5 +1,10 @@
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
+const { AsyncLocalStorage } = require('async_hooks');
+
+const storeContext = new AsyncLocalStorage();
 
 function generateId() {
   return 'mem_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -97,8 +102,10 @@ class QueryChain {
     if (this._sortObj) {
       const [field, dir] = Object.entries(this._sortObj)[0];
       result.sort((a, b) => {
-        const va = a[field] ?? '';
-        const vb = b[field] ?? '';
+        let va = a[field] ?? '';
+        let vb = b[field] ?? '';
+        if (va instanceof Date) va = va.getTime();
+        if (vb instanceof Date) vb = vb.getTime();
         return dir === -1 ? (vb > va ? 1 : vb < va ? -1 : 0) : (va > vb ? 1 : va < vb ? -1 : 0);
       });
     }
@@ -186,6 +193,13 @@ class InMemoryCollection {
       return data.map(d => this._insertItem(d));
     }
     return this._insertItem(data);
+  }
+
+  async insertMany(data) {
+    if (Array.isArray(data)) {
+      return data.map(d => this._insertItem(d));
+    }
+    return [this._insertItem(data)];
   }
 
   async findOneAndUpdate(query, update, options = {}) {
@@ -287,13 +301,16 @@ class InMemoryCollection {
 }
 
 class MemoryStore {
-  constructor() {
+  constructor(options = {}) {
+    this.isDemo = Boolean(options.isDemo);
     this.users = new InMemoryCollection('users', this);
     this.classes = new InMemoryCollection('classes', this);
     this.subjects = new InMemoryCollection('subjects', this);
     this.students = new InMemoryCollection('students', this);
     this.attendances = new InMemoryCollection('attendances', this);
     this.activities = new InMemoryCollection('activities', this);
+    this.backups = new InMemoryCollection('backups', this);
+
     this.seedDefaultData();
   }
 
@@ -303,9 +320,9 @@ class MemoryStore {
 
     this.users.items = [
       {
-        _id: 'mem_admin_01',
+        _id: this.isDemo ? 'mem_demo_admin' : 'mem_admin_01',
         userId: 'admin',
-        name: 'Admin Noorudheen',
+        name: this.isDemo ? 'Demo Admin Noorudheen' : 'Admin Noorudheen',
         email: (process.env.ADMIN_EMAIL || 'admin@hajar.edu').toLowerCase(),
         password: adminPassHash,
         role: 'admin',
@@ -314,7 +331,7 @@ class MemoryStore {
         lastLogin: new Date()
       },
       {
-        _id: 'mem_teacher_01',
+        _id: this.isDemo ? 'mem_demo_teacher' : 'mem_teacher_01',
         userId: 'teacher',
         name: 'Teacher Fatima',
         email: 'teacher@hajar.edu',
@@ -326,19 +343,20 @@ class MemoryStore {
       }
     ];
 
-    const classAId = 'mem_cls_10a';
-    const classBId = 'mem_cls_10b';
-    const classCId = 'mem_cls_9a';
+    const prefix = this.isDemo ? 'demo_' : 'mem_';
+    const classAId = `${prefix}cls_10a`;
+    const classBId = `${prefix}cls_10b`;
+    const classCId = `${prefix}cls_9a`;
 
     this.classes.items = [
-      { _id: classAId, name: 'Grade 10', section: 'A', academicYear: '2026', description: 'Senior Secondary Science & Maths', createdAt: new Date() },
-      { _id: classBId, name: 'Grade 10', section: 'B', academicYear: '2026', description: 'Senior Secondary Arts & Commerce', createdAt: new Date() },
-      { _id: classCId, name: 'Grade 9', section: 'A', academicYear: '2026', description: 'Junior High', createdAt: new Date() }
+      { _id: classAId, name: this.isDemo ? 'Demo Grade 10' : 'Grade 10', section: 'A', academicYear: '2026', description: 'Senior Secondary Science & Maths', createdAt: new Date() },
+      { _id: classBId, name: this.isDemo ? 'Demo Grade 10' : 'Grade 10', section: 'B', academicYear: '2026', description: 'Senior Secondary Arts & Commerce', createdAt: new Date() },
+      { _id: classCId, name: this.isDemo ? 'Demo Grade 9' : 'Grade 9', section: 'A', academicYear: '2026', description: 'Junior High', createdAt: new Date() }
     ];
 
-    const mathId = 'mem_sub_math';
-    const sciId = 'mem_sub_sci';
-    const engId = 'mem_sub_eng';
+    const mathId = `${prefix}sub_math`;
+    const sciId = `${prefix}sub_sci`;
+    const engId = `${prefix}sub_eng`;
 
     this.subjects.items = [
       { _id: mathId, name: 'Mathematics', code: 'MATH101', classes: [classAId, classBId, classCId], createdAt: new Date() },
@@ -358,7 +376,7 @@ class MemoryStore {
     ];
 
     this.students.items = rawStudents.map((s, idx) => ({
-      _id: `mem_std_${idx + 1}`,
+      _id: `${prefix}std_${idx + 1}`,
       ...s,
       classId: classAId,
       isActive: true,
@@ -384,7 +402,7 @@ class MemoryStore {
         });
 
         this.attendances.items.push({
-          _id: `mem_att_${i}`,
+          _id: `${prefix}att_${i}`,
           date: dStr,
           year: yyyy,
           month: parseInt(mm, 10),
@@ -403,9 +421,11 @@ class MemoryStore {
     }
 
     this.activities.items.push({
-      _id: 'mem_act_init',
+      _id: `${prefix}act_init`,
       action: 'SYSTEM_INIT',
-      description: 'Hajar App in-memory store initialized with default school data',
+      description: this.isDemo 
+        ? 'Hajar App Demo Sandbox initialized with isolated sample school data'
+        : 'Hajar App in-memory store initialized with default school data',
       user: { name: 'System', email: 'admin@hajar.edu', role: 'admin' },
       details: {},
       timestamp: new Date()
@@ -413,21 +433,37 @@ class MemoryStore {
   }
 }
 
-const memoryStore = new MemoryStore();
+const memoryStore = new MemoryStore({ isDemo: false });
+const demoMemoryStore = new MemoryStore({ isDemo: true });
 
 /**
  * Creates a transparent Smart Model that delegates to MongoDB when connected (readyState === 1),
  * or instantly to MemoryStore when offline or unconfigured.
+ * When in Demo Sandbox (storeContext isDemo === true), automatically routes to demoMemoryStore.
  */
 function wrapModel(realMongooseModel, memoryCollection) {
+  const colName = memoryCollection.name;
   return new Proxy(realMongooseModel, {
     construct(target, args) {
+      const ctx = storeContext.getStore();
+      if (ctx && ctx.isDemo) {
+        const targetCol = demoMemoryStore[colName] || memoryCollection;
+        return targetCol._wrapDoc(args[0] || {});
+      }
       if (mongoose.connection && mongoose.connection.readyState === 1) {
         return new target(...args);
       }
       return memoryCollection._wrapDoc(args[0] || {});
     },
     get(target, prop, receiver) {
+      const ctx = storeContext.getStore();
+      if (ctx && ctx.isDemo) {
+        const targetCol = demoMemoryStore[colName] || memoryCollection;
+        if (typeof targetCol[prop] === 'function') {
+          return targetCol[prop].bind(targetCol);
+        }
+        return Reflect.get(target, prop, receiver);
+      }
       if (mongoose.connection && mongoose.connection.readyState === 1) {
         return Reflect.get(target, prop, receiver);
       }
@@ -441,5 +477,7 @@ function wrapModel(realMongooseModel, memoryCollection) {
 
 module.exports = {
   memoryStore,
+  demoMemoryStore,
+  storeContext,
   wrapModel
 };
