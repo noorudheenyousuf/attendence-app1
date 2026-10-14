@@ -69,4 +69,7 @@ userSchema.methods.toJSON = function() {
   return obj;
 };
 
-module.exports = mongoose.model('User', userSchema);
+const RealUserModel = mongoose.model('User', userSchema);
+const { memoryStore, wrapModel } = require('../config/memoryStore');
+
+module.exports = wrapModel(RealUserModel, memoryStore.users);

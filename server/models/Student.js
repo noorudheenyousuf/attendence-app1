@@ -17,4 +17,7 @@ const studentSchema = new mongoose.Schema({
 // Ensure rollNo is unique per class
 studentSchema.index({ classId: 1, rollNo: 1 }, { unique: true });
 
-module.exports = mongoose.model('Student', studentSchema);
+const RealStudentModel = mongoose.model('Student', studentSchema);
+const { memoryStore, wrapModel } = require('../config/memoryStore');
+
+module.exports = wrapModel(RealStudentModel, memoryStore.students);

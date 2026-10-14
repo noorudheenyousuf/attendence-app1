@@ -27,4 +27,7 @@ const attendanceSchema = new mongoose.Schema({
 attendanceSchema.index({ date: 1, classId: 1, subjectId: 1 }, { unique: true });
 attendanceSchema.index({ classId: 1, year: 1, month: 1 });
 
-module.exports = mongoose.model('Attendance', attendanceSchema);
+const RealAttendanceModel = mongoose.model('Attendance', attendanceSchema);
+const { memoryStore, wrapModel } = require('../config/memoryStore');
+
+module.exports = wrapModel(RealAttendanceModel, memoryStore.attendances);

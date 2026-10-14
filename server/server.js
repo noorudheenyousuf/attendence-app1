@@ -39,7 +39,15 @@ app.use('/api/settings', settingRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', app: 'Hajar App', timestamp: new Date() });
+  const mongoose = require('mongoose');
+  const isDbConnected = Boolean(mongoose.connection && mongoose.connection.readyState === 1);
+  res.json({
+    status: 'ok',
+    app: 'Hajar App',
+    databaseConnected: isDbConnected,
+    databaseMode: isDbConnected ? 'mongodb' : 'memory',
+    timestamp: new Date()
+  });
 });
 
 // Single Page Application fallback (Compatible with Express 4 & 5)
@@ -164,7 +172,12 @@ async function autoSeedIfEmpty() {
 const startServer = async () => {
   const isConnected = await connectDB();
   if (isConnected) {
+    if (authRoutes.seedDefaultUsers) {
+      await authRoutes.seedDefaultUsers();
+    }
     await autoSeedIfEmpty();
+  } else {
+    console.log('[Hajar App] Zero-downtime In-Memory Mode active. Demo accounts (admin/teacher) and default classes are ready for immediate use.');
   }
 
   const server = app.listen(PORT, () => {

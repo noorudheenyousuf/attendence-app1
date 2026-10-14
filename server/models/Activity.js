@@ -12,4 +12,7 @@ const activitySchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Activity', activitySchema);
+const RealActivityModel = mongoose.model('Activity', activitySchema);
+const { memoryStore, wrapModel } = require('../config/memoryStore');
+
+module.exports = wrapModel(RealActivityModel, memoryStore.activities);

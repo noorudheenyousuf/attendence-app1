@@ -8,4 +8,7 @@ const classSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Class', classSchema);
+const RealClassModel = mongoose.model('Class', classSchema);
+const { memoryStore, wrapModel } = require('../config/memoryStore');
+
+module.exports = wrapModel(RealClassModel, memoryStore.classes);

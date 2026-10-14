@@ -7,4 +7,7 @@ const subjectSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Subject', subjectSchema);
+const RealSubjectModel = mongoose.model('Subject', subjectSchema);
+const { memoryStore, wrapModel } = require('../config/memoryStore');
+
+module.exports = wrapModel(RealSubjectModel, memoryStore.subjects);

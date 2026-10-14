@@ -311,6 +311,11 @@
     <!-- Alert Box for Errors & Success -->
     <div id="auth-alert" class="auth-alert" role="alert"></div>
 
+    <!-- Optional DB Notice Banner -->
+    <div id="db-notice-banner" style="display:none; margin-bottom:1rem; padding:0.6rem 0.85rem; border-radius:var(--radius-sm); font-size:0.8rem; background:rgba(234, 179, 8, 0.12); border:1px solid rgba(234, 179, 8, 0.3); color:#fef08a; line-height:1.4;">
+      <span>💡 <b>Notice:</b> MongoDB is currently in In-Memory Demo Mode. Google Login & 1-Click Demo accounts work immediately!</span>
+    </div>
+
     <!-- Mode Tabs: Sign In / Create Account -->
     <div class="auth-tabs">
       <button id="tab-btn-signin" class="auth-tab-btn active" onclick="switchAuthTab('signin')">
@@ -619,6 +624,11 @@
         const config = await res.json();
         googleClientId = config.googleClientId;
 
+        if (config.databaseMode === 'memory') {
+          const banner = document.getElementById('db-notice-banner');
+          if (banner) banner.style.display = 'block';
+        }
+
         if (!googleClientId) {
           console.warn('Google Client ID not configured.');
           return;
@@ -673,10 +683,11 @@
           })
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
         if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Google authentication failed on server');
+          const detailMsg = data.details && data.details !== data.error ? ` (${data.details})` : '';
+          throw new Error((data.error || 'Google authentication failed on server') + detailMsg);
         }
 
         showAlert(`Signed in as ${data.user.name}! Redirecting to Hajar App...`, 'success');

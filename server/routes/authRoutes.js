@@ -80,17 +80,38 @@ async function seedDefaultUsers() {
   }
 }
 
-// Run default users setup
-seedDefaultUsers();
+function decodeJwtPayload(token) {
+  if (!token || typeof token !== 'string') return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+    const json = Buffer.from(base64, 'base64').toString('utf8');
+    return JSON.parse(json);
+  } catch (err) {
+    try {
+      return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+    } catch (_) {
+      return null;
+    }
+  }
+}
 
 // -------------------------------------------------------------
 // 1. Get Google client config
 // -------------------------------------------------------------
 router.get('/config', (req, res) => {
+  const mongoose = require('mongoose');
+  const isDbConnected = Boolean(mongoose.connection && mongoose.connection.readyState === 1);
   res.json({
     googleClientId: GOOGLE_CLIENT_ID,
     adminEmail: process.env.ADMIN_EMAIL || 'admin@hajar.edu',
-    isGoogleAuthEnabled: Boolean(GOOGLE_CLIENT_ID)
+    isGoogleAuthEnabled: Boolean(GOOGLE_CLIENT_ID),
+    databaseConnected: isDbConnected,
+    databaseMode: isDbConnected ? 'mongodb' : 'memory'
   });
 });
 
@@ -244,22 +265,11 @@ router.post('/google', async (req, res) => {
         payload = ticket.getPayload();
       } catch (verifyErr) {
         console.warn('Google verifyIdToken note:', verifyErr.message);
-        // Fallback to decode JWT parts
-        const parts = credential.split('.');
-        if (parts.length === 3) {
-          try {
-            payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
-          } catch (_) {}
-        }
+        // Fallback to safe JWT payload decode
+        payload = decodeJwtPayload(credential);
       }
     } else {
-      // Decode JWT payload if client ID not configured
-      const parts = credential.split('.');
-      if (parts.length === 3) {
-        try {
-          payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
-        } catch (_) {}
-      }
+      payload = decodeJwtPayload(credential);
     }
 
     if (!payload || !payload.email) {
@@ -270,13 +280,12 @@ router.post('/google', async (req, res) => {
     const cleanEmail = email.toLowerCase().trim();
     const adminEmail = (process.env.ADMIN_EMAIL || 'admin@hajar.edu').toLowerCase();
 
-    // Check if user exists by googleId or email
-    let user = await User.findOne({
-      $or: [
-        { googleId },
-        { email: cleanEmail }
-      ]
-    });
+    // Check if user exists by googleId or email (avoid { googleId: undefined } which matches any doc without googleId)
+    const userQuery = (googleId && typeof googleId === 'string')
+      ? { $or: [{ googleId }, { email: cleanEmail }] }
+      : { email: cleanEmail };
+
+    let user = await User.findOne(userQuery);
 
     const isFirstUser = (await User.countDocuments()) === 0;
     let role = 'teacher';
@@ -305,7 +314,7 @@ router.post('/google', async (req, res) => {
       await logActivity('USER_REGISTERED', `New user registered via Google: ${user.name} (${user.role})`, user);
     } else {
       user.lastLogin = new Date();
-      if (!user.googleId) user.googleId = googleId;
+      if (!user.googleId && googleId) user.googleId = googleId;
       if (picture && (!user.avatar || user.avatar.includes('dicebear'))) {
         user.avatar = picture;
       }
@@ -330,7 +339,11 @@ router.post('/google', async (req, res) => {
     });
   } catch (err) {
     console.error('Google auth error:', err);
-    res.status(500).json({ error: 'Authentication failed', details: err.message });
+    res.status(500).json({ 
+      success: false, 
+      error: err.message || 'Authentication failed', 
+      details: err.message 
+    });
   }
 });
 
@@ -533,4 +546,5 @@ router.post('/logout', async (req, res) => {
   }
 });
 
+router.seedDefaultUsers = seedDefaultUsers;
 module.exports = router;
