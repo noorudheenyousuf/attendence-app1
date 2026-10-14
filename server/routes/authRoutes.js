@@ -339,12 +339,21 @@ router.post('/google', async (req, res) => {
 // -------------------------------------------------------------
 router.get('/google/redirect', (req, res) => {
   try {
-    const oauthClient = getOAuthRedirectClient(req);
-    const authUrl = oauthClient.generateAuthUrl({
+    if (!GOOGLE_CLIENT_ID) {
+      return res.redirect('/login.html?error=' + encodeURIComponent('Google Sign-In is not configured. Please set GOOGLE_CLIENT_ID in your environment variables.'));
+    }
+
+    const callbackUrl = getCallbackUrl(req);
+    // Explicitly build the OAuth URL to guarantee client_id is always present
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: callbackUrl,
+      response_type: 'code',
+      scope: 'openid profile email',
       access_type: 'offline',
-      scope: ['profile', 'email'],
       prompt: 'select_account'
     });
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     res.redirect(authUrl);
   } catch (err) {
     console.error('Google redirect error:', err);
