@@ -1504,9 +1504,7 @@ window.handleLogout = async function() {
   } finally {
     state.currentUser = null;
     localStorage.removeItem('hajar_user');
-    updateUserUI();
-    showToast('You have been logged out', 'info');
-    openAuthModal('signin');
+    window.location.replace('/login.html?logout=true');
   }
 };
 

@@ -8,6 +8,14 @@
   <link rel="icon" type="image/svg+xml" href="/assets/icons/icon.svg">
   <link rel="stylesheet" href="/css/style.css">
 
+  <!-- Auto-forward to main dashboard if already logged in -->
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    if (localStorage.getItem('hajar_user') && !urlParams.get('switch') && !urlParams.get('logout')) {
+      window.location.replace('/#attendance');
+    }
+  </script>
+
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogleSignIn()"></script>
 

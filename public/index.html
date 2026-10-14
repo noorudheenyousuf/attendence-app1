@@ -14,6 +14,13 @@
   <link rel="icon" type="image/svg+xml" href="./assets/icons/icon.svg">
   <link rel="apple-touch-icon" href="./assets/icons/icon.svg">
 
+  <!-- Instant Auth Gate: Show Login Page First If Not Authenticated -->
+  <script>
+    if (!localStorage.getItem('hajar_user')) {
+      window.location.replace('/login.html');
+    }
+  </script>
+
   <!-- Google Identity Services for Google Authentication -->
   <script src="https://accounts.google.com/gsi/client" async defer onload="window.onGoogleLibraryLoad && window.onGoogleLibraryLoad()"></script>
 
@@ -337,7 +344,7 @@
         <div class="section-header" style="margin-bottom:0.75rem;">
           <h3 style="font-size:1.05rem; font-weight:700;">👤 Account & Authentication</h3>
           <div style="display:flex; gap:0.4rem;">
-            <button class="btn btn-secondary btn-sm" onclick="openAuthModal('signin')">🔑 Switch Account</button>
+            <button class="btn btn-secondary btn-sm" onclick="window.location.href='/login.html?switch=true'">🔑 Switch Account</button>
             <button class="btn btn-danger-outline btn-sm" onclick="handleLogout()">🚪 Log Out</button>
           </div>
         </div>
