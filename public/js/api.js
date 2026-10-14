@@ -99,10 +99,16 @@ const api = {
   // Auth & Roles
   auth: {
     getConfig: () => request('/auth/config'),
+    login: (identifier, password) => 
+      request('/auth/login', { method: 'POST', body: { identifier, password } }),
+    register: (userData) => 
+      request('/auth/register', { method: 'POST', body: userData }),
     verifyGoogle: (credential, client_id) => 
       request('/auth/google', { method: 'POST', body: { credential, client_id } }),
     loginAs: (role, name, email) => 
-      request('/auth/login-as', { method: 'POST', body: { role, name, email } })
+      request('/auth/login-as', { method: 'POST', body: { role, name, email } }),
+    logout: (user) => 
+      request('/auth/logout', { method: 'POST', body: { user } })
   }
 };
 

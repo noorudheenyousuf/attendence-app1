@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Login - Hajar App School Management</title>
+  
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/icon.svg">
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogleSignIn()"></script>
+
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: radial-gradient(circle at top right, rgba(13, 148, 136, 0.15), transparent 50%),
+                  radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.12), transparent 50%),
+                  var(--bg-body);
+      padding: 1.5rem 1rem;
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 440px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg), var(--shadow-glow);
+      padding: 2.2rem 2rem;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+
+    .auth-brand-logo {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--primary-500), var(--accent));
+      border-radius: 16px;
+      box-shadow: 0 8px 16px rgba(13, 148, 136, 0.3);
+    }
+
+    .auth-brand-logo svg {
+      width: 32px;
+      height: 32px;
+      fill: white;
+    }
+
+    .auth-title {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .auth-subtitle {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+    }
+
+    /* Auth Mode Tabs */
+    .auth-tabs {
+      display: flex;
+      background: var(--bg-input);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .auth-tab-btn {
+      flex: 1;
+      padding: 0.6rem 0.5rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: center;
+    }
+
+    .auth-tab-btn.active {
+      background: var(--primary-500);
+      color: white;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-toggle-btn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .password-toggle-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.25rem 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .divider::before { margin-right: 0.75rem; }
+    .divider::after { margin-left: 0.75rem; }
+
+    /* Custom Google Button */
+    .btn-google-custom {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      background: #ffffff;
+      color: #1f2937;
+      border: 1px solid #d1d5db;
+      font-weight: 600;
+      font-size: 0.92rem;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-google-custom:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .btn-google-custom img {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Google Button GIS Container */
+    #google-login-btn-container {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      min-height: 44px;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Alert Box */
+    .auth-alert {
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      margin-bottom: 1.25rem;
+      display: none;
+      line-height: 1.4;
+    }
+
+    .auth-alert.error {
+      display: flex;
+      background: var(--danger-bg);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .auth-alert.success {
+      display: flex;
+      background: var(--success-bg);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .auth-alert.info {
+      display: flex;
+      background: var(--info-bg);
+      color: #7dd3fc;
+      border: 1px solid rgba(14, 165, 233, 0.4);
+    }
+
+    /* Quick Demo Login Grid */
+    .demo-credentials-card {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: var(--bg-input);
+      border: 1px dashed var(--border-color);
+      border-radius: var(--radius-md);
+    }
+
+    .demo-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.6rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .demo-btns-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .demo-btn {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      padding: 0.55rem 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .demo-btn:hover {
+      border-color: var(--primary-500);
+      background: var(--primary-glow);
+      transform: translateY(-1px);
+    }
+
+    .demo-btn small {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .auth-form {
+      display: none;
+    }
+
+    .auth-form.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="auth-container">
+    
+    <!-- Branding Header -->
+    <div class="auth-header">
+      <div class="auth-brand-logo">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zm0 13.5l-9-4.91v4.41L12 21l9-5V11.59l-9 4.91z"/>
+        </svg>
+      </div>
+      <h1 class="auth-title">Hajar App</h1>
+      <p class="auth-subtitle">School Management & Student Attendance</p>
+    </div>
+
+    <!-- Alert Box for Errors & Success -->
+    <div id="auth-alert" class="auth-alert" role="alert"></div>
+
+    <!-- Mode Tabs: Sign In / Create Account -->
+    <div class="auth-tabs">
+      <button id="tab-btn-signin" class="auth-tab-btn active" onclick="switchAuthTab('signin')">
+        Sign In
+      </button>
+      <button id="tab-btn-register" class="auth-tab-btn" onclick="switchAuthTab('register')">
+        Create Account
+      </button>
+    </div>
+
+    <!-- ==========================================
+         FORM 1: SIGN IN (User ID & Password)
+         ========================================== -->
+    <form id="form-signin" class="auth-form active" onsubmit="handlePasswordLogin(event)">
+      
+      <!-- User ID or Email -->
+      <div class="form-group">
+        <label class="form-label" for="login-identifier">
+          User ID or Email <span style="color:var(--danger)">*</span>
+        </label>
+        <input 
+          type="text" 
+          id="login-identifier" 
+          class="form-control" 
+          placeholder="e.g. admin or teacher" 
+          required 
+          autocomplete="username"
+        >
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label class="form-label" for="login-password">
+            Password <span style="color:var(--danger)">*</span>
+          </label>
+        </div>
+        <div class="password-wrapper">
+          <input 
+            type="password" 
+            id="login-password" 
+            class="form-control" 
+            placeholder="Enter your password" 
+            required 
+            autocomplete="current-password"
+          >
+          <button 
+            type="button" 
+            class="password-toggle-btn" 
+            onclick="togglePasswordVisibility('login-password', this)"
+            title="Show / Hide Password"
+            aria-label="Toggle password visibility"
+          >
+            👁️
+          </button>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" id="btn-login-submit" class="btn btn-primary btn-block" style="margin-top:0.75rem; padding:0.85rem;">
+        Sign In with Credentials
+      </button>
+
+      <!-- Divider -->
+      <div class="divider">or continue with</div>
+
+      <!-- Google Sign In GIS Container -->
+      <div id="google-login-btn-container"></div>
+
+      <!-- Fallback Direct Google OAuth Button -->
+      <button type="button" id="btn-google-direct" class="btn-google-custom" onclick="handleGoogleDirectLogin()">
+        <img src="/google-logo.png" alt="Google">
+        <span>Sign in with Google</span>
+      </button>
+
+    </form>
+
+
+    <!-- ==========================================
+         FORM 2: CREATE ACCOUNT (Registration)
+         ========================================== -->
+    <form id="form-register" class="auth-form" onsubmit="handleRegistration(event)">
+      
+      <div class="form-group">
+        <label class="form-label" for="reg-name">Full Name <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="reg-name" class="form-control" placeholder="e.g. Fatima Tariq" required>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="reg-userid">User ID / Username <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="reg-userid" class="form-control" placeholder="e.g. fatima" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-role">Role <span style="color:var(--danger)">*</span></label>
+          <select id="reg-role" class="form-control">
+            <option value="teacher">Teacher</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="reg-email">Email Address <span style="color:var(--danger)">*</span></label>
+        <input type="email" id="reg-email" class="form-control" placeholder="fatima@hajar.edu" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="reg-password">Password <span style="color:var(--danger)">*</span></label>
+        <div class="password-wrapper">
+          <input type="password" id="reg-password" class="form-control" placeholder="Minimum 4 characters" minlength="4" required autocomplete="new-password">
+          <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('reg-password', this)">👁️</button>
+        </div>
+      </div>
+
+      <button type="submit" id="btn-register-submit" class="btn btn-primary btn-block" style="margin-top:0.75rem; padding:0.85rem;">
+        Create Account & Sign In
+      </button>
+
+    </form>
+
+    <!-- Demo Credentials Quick Access -->
+    <div class="demo-credentials-card">
+      <div class="demo-title">
+        <span>⚡ Quick Demo Credentials</span>
+        <span style="font-weight:400; color:var(--primary-500)">1-Click Access</span>
+      </div>
+      <div class="demo-btns-grid">
+        <button type="button" class="demo-btn" onclick="quickFillAndLogin('admin', 'admin123')">
+          <span>🔑 Admin Noorudheen</span>
+          <small>admin / admin123</small>
+        </button>
+        <button type="button" class="demo-btn" onclick="quickFillAndLogin('teacher', 'teacher123')">
+          <span>👩‍🏫 Teacher Fatima</span>
+          <small>teacher / teacher123</small>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let googleClientId = '';
+
+    // Switch Tabs: Sign In <-> Register
+    function switchAuthTab(tab) {
+      document.getElementById('tab-btn-signin').classList.toggle('active', tab === 'signin');
+      document.getElementById('tab-btn-register').classList.toggle('active', tab === 'register');
+      document.getElementById('form-signin').classList.toggle('active', tab === 'signin');
+      document.getElementById('form-register').classList.toggle('active', tab === 'register');
+      hideAlert();
+    }
+
+    // Toggle Password Visibility
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+      }
+    }
+
+    // Show / Hide Alert Box
+    function showAlert(message, type = 'error') {
+      const alertEl = document.getElementById('auth-alert');
+      alertEl.textContent = message;
+      alertEl.className = `auth-alert ${type}`;
+    }
+
+    function hideAlert() {
+      const alertEl = document.getElementById('auth-alert');
+      alertEl.style.display = 'none';
+      alertEl.textContent = '';
+    }
+
+    // Handle User ID & Password Login
+    async function handlePasswordLogin(e) {
+      e.preventDefault();
+      const identifier = document.getElementById('login-identifier').value.trim();
+      const password = document.getElementById('login-password').value;
+      const submitBtn = document.getElementById('btn-login-submit');
+
+      if (!identifier || !password) {
+        showAlert('Please enter both User ID/Email and password.', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Signing in...';
+      hideAlert();
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Login failed. Please check your credentials.');
+        }
+
+        showAlert(`Welcome back, ${data.user.name}! Redirecting...`, 'success');
+        localStorage.setItem('hajar_user', JSON.stringify(data.user));
+
+        setTimeout(() => {
+          window.location.href = '/#attendance';
+        }, 600);
+
+      } catch (err) {
+        showAlert(err.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In with Credentials';
+      }
+    }
+
+    // Handle User Registration
+    async function handleRegistration(e) {
+      e.preventDefault();
+      const name = document.getElementById('reg-name').value.trim();
+      const userId = document.getElementById('reg-userid').value.trim();
+      const role = document.getElementById('reg-role').value;
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const submitBtn = document.getElementById('btn-register-submit');
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating account...';
+      hideAlert();
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, userId, role, email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Registration failed.');
+        }
+
+        showAlert(`Account created! Welcome, ${data.user.name}. Redirecting...`, 'success');
+        localStorage.setItem('hajar_user', JSON.stringify(data.user));
+
+        setTimeout(() => {
+          window.location.href = '/#attendance';
+        }, 600);
+
+      } catch (err) {
+        showAlert(err.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create Account & Sign In';
+      }
+    }
+
+    // 1-Click Quick Demo Login
+    async function quickFillAndLogin(userId, password) {
+      document.getElementById('login-identifier').value = userId;
+      document.getElementById('login-password').value = password;
+      switchAuthTab('signin');
+      
+      const submitBtn = document.getElementById('btn-login-submit');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Signing in with demo account...';
+      hideAlert();
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: userId, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Demo login failed');
+        }
+
+        showAlert(`Demo Login: Welcome ${data.user.name} (${data.user.role.toUpperCase()})! Redirecting...`, 'success');
+        localStorage.setItem('hajar_user', JSON.stringify(data.user));
+
+        setTimeout(() => {
+          window.location.href = '/#attendance';
+        }, 500);
+
+      } catch (err) {
+        showAlert(err.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In with Credentials';
+      }
+    }
+
+    // Google Identity Services (GIS)
+    async function initGoogleSignIn() {
+      try {
+        const res = await fetch('/api/auth/config');
+        const config = await res.json();
+        googleClientId = config.googleClientId;
+
+        if (!googleClientId) {
+          console.warn('Google Client ID not configured.');
+          return;
+        }
+
+        // Poll if google.accounts.id is not ready yet
+        const checkGsi = setInterval(() => {
+          if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            clearInterval(checkGsi);
+
+            google.accounts.id.initialize({
+              client_id: googleClientId,
+              callback: handleGoogleCredentialResponse,
+              auto_select: false
+            });
+
+            const container = document.getElementById('google-login-btn-container');
+            if (container) {
+              google.accounts.id.renderButton(container, {
+                theme: 'filled_black',
+                size: 'large',
+                text: 'continue_with',
+                shape: 'rectangular',
+                width: 380
+              });
+              // Hide fallback direct button if GIS button successfully rendered
+              const directBtn = document.getElementById('btn-google-direct');
+              if (directBtn) directBtn.style.display = 'none';
+            }
+          }
+        }, 150);
+
+        // Cancel polling after 5 seconds if GIS blocked
+        setTimeout(() => clearInterval(checkGsi), 5000);
+
+      } catch (err) {
+        console.warn('Could not load Google config:', err.message);
+      }
+    }
+
+    // Google Credential Callback (GIS)
+    async function handleGoogleCredentialResponse(response) {
+      try {
+        showAlert('Verifying Google credentials with server...', 'info');
+
+        const res = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            credential: response.credential,
+            client_id: googleClientId 
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Google authentication failed on server');
+        }
+
+        showAlert(`Signed in as ${data.user.name}! Redirecting to Hajar App...`, 'success');
+        localStorage.setItem('hajar_user', JSON.stringify(data.user));
+
+        setTimeout(() => {
+          window.location.href = '/#attendance';
+        }, 600);
+
+      } catch (err) {
+        console.error('Google verification error:', err);
+        showAlert(`Google Login Error: ${err.message}`, 'error');
+      }
+    }
+
+    // Fallback: Direct Google OAuth redirect
+    function handleGoogleDirectLogin() {
+      showAlert('Redirecting to Google Sign-In...', 'info');
+      window.location.href = '/api/auth/google/redirect';
+    }
+
+    // Check URL parameters for any messages
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get('error');
+      if (error) {
+        showAlert(`Sign-in notice: ${decodeURIComponent(error)}`, 'error');
+      }
+
+      // Initialize Google
+      initGoogleSignIn();
+    });
+  </script>
+
+</body>
+</html>

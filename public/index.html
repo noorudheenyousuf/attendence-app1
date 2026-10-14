@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="./assets/icons/icon.svg">
 
   <!-- Google Identity Services for Google Authentication -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://accounts.google.com/gsi/client" async defer onload="window.onGoogleLibraryLoad && window.onGoogleLibraryLoad()"></script>
 
   <!-- App Stylesheet -->
   <link rel="stylesheet" href="./css/style.css">
@@ -45,12 +45,17 @@
 
       <!-- User Profile Badge & Role -->
       <div id="user-profile-badge" class="user-badge" title="Account & Roles">
-        <img id="header-user-avatar" class="user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=admin" alt="Avatar">
+        <img id="header-user-avatar" class="user-avatar" src="/black coat.jpeg" alt="Avatar">
         <div class="user-info-text">
           <span id="header-user-name" class="user-name">Admin</span>
           <span id="header-user-role" class="role-pill admin">ADMIN</span>
         </div>
       </div>
+
+      <!-- Header Logout Button -->
+      <button id="btn-header-logout" class="btn btn-sm btn-secondary" title="Log Out" style="margin-left:0.25rem; display:flex; align-items:center; gap:0.3rem; padding:0.4rem 0.6rem;">
+        <span>🚪</span> <span class="hide-mobile">Log Out</span>
+      </button>
     </div>
   </header>
 
@@ -329,14 +334,32 @@
 
       <!-- User Experience & Google Authentication -->
       <div class="card">
-        <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.75rem;">👤 User Experience & Authentication</h3>
-        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
-          Admin role has overarching controls; all teachers can use the complete attendance, report, student, class, and subject features.
-        </p>
+        <div class="section-header" style="margin-bottom:0.75rem;">
+          <h3 style="font-size:1.05rem; font-weight:700;">👤 Account & Authentication</h3>
+          <div style="display:flex; gap:0.4rem;">
+            <button class="btn btn-secondary btn-sm" onclick="openAuthModal('signin')">🔑 Switch Account</button>
+            <button class="btn btn-danger-outline btn-sm" onclick="handleLogout()">🚪 Log Out</button>
+          </div>
+        </div>
+
+        <!-- Current Active User Profile Banner -->
+        <div id="settings-user-card" style="display:flex; align-items:center; gap:1rem; padding:0.9rem; background:var(--bg-input); border-radius:var(--radius-md); border:1px solid var(--border-color); margin-bottom:1rem;">
+          <img id="settings-user-avatar" src="/black coat.jpeg" alt="Avatar" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid var(--primary-500);">
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+              <strong id="settings-user-name" style="font-size:1rem;">Admin Noorudheen</strong>
+              <span id="settings-user-role" class="role-pill admin">ADMIN</span>
+            </div>
+            <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:2px;">
+              <span>User ID: <b id="settings-user-id" style="color:var(--text-primary)">admin</b></span> • 
+              <span id="settings-user-email">admin@hajar.edu</span>
+            </div>
+          </div>
+        </div>
 
         <!-- Instant Switcher Demo -->
         <div style="background:var(--bg-input); padding:0.9rem; border-radius:var(--radius-md); border:1px solid var(--border-color); margin-bottom:1rem;">
-          <span class="form-label">Multi-User Testing: Switch Current Role</span>
+          <span class="form-label">Multi-User Testing: Quick Role Switch</span>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.4rem;">
             <button class="btn btn-secondary btn-sm" onclick="switchUserRole('admin')">
               🔑 Switch to Admin (Me - Noorudheen)
@@ -349,9 +372,15 @@
 
         <!-- Google Sign In Container -->
         <div>
-          <span class="form-label">Google Single Sign-On (Production)</span>
-          <div id="google-signin-btn-container" style="margin-top:0.4rem;">
-            <!-- Rendered by Google Identity Services -->
+          <span class="form-label">Google Single Sign-On</span>
+          <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; margin-top:0.4rem;">
+            <div id="google-signin-btn-container">
+              <!-- Rendered by Google Identity Services -->
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" style="display:inline-flex; align-items:center; gap:6px; background:#ffffff; color:#1f2937; border-color:#d1d5db; font-weight:600;" onclick="window.location.href='/api/auth/google/redirect'">
+              <img src="/google-logo.png" alt="Google" style="width:16px; height:16px;">
+              <span>Google Sign-In (Redirect)</span>
+            </button>
           </div>
         </div>
       </div>
@@ -462,8 +491,128 @@
 
 
   <!-- ==========================================
-       MODALS
-       ========================================== -->
+  <!-- Authentication / Login Modal -->
+  <div id="modal-auth" class="modal-overlay">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.3rem;">🔐</span>
+          <h3 class="modal-title" id="auth-modal-title">Sign In to Hajar App</h3>
+        </div>
+        <button class="btn-icon" id="btn-close-auth-modal" data-close-modal>✕</button>
+      </div>
+
+      <div class="modal-body" style="padding-top:0.75rem;">
+        
+        <!-- Alert Box -->
+        <div id="modal-auth-alert" style="display:none; padding:0.6rem 0.8rem; border-radius:var(--radius-sm); font-size:0.85rem; margin-bottom:1rem; line-height:1.4;"></div>
+
+        <!-- Mode Tabs: Sign In / Create Account -->
+        <div style="display:flex; background:var(--bg-input); border-radius:var(--radius-md); padding:3px; margin-bottom:1.25rem; border:1px solid var(--border-color);">
+          <button type="button" id="modal-tab-signin" class="btn btn-sm" style="flex:1; border:none; background:var(--primary-500); color:white; font-weight:600;" onclick="switchModalAuthTab('signin')">
+            Sign In
+          </button>
+          <button type="button" id="modal-tab-register" class="btn btn-sm" style="flex:1; border:none; background:transparent; color:var(--text-secondary); font-weight:600;" onclick="switchModalAuthTab('register')">
+            Create Account
+          </button>
+        </div>
+
+        <!-- FORM 1: SIGN IN -->
+        <form id="form-modal-signin" onsubmit="handleModalPasswordLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="modal-login-id">User ID or Email *</label>
+            <input type="text" id="modal-login-id" class="form-control" placeholder="e.g. admin or teacher" required autocomplete="username">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modal-login-password">Password *</label>
+            <div style="position:relative;">
+              <input type="password" id="modal-login-password" class="form-control" placeholder="Enter your password" required autocomplete="current-password" style="padding-right:2.5rem;">
+              <button type="button" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted);" onclick="toggleModalPasswordVisibility('modal-login-password', this)" title="Show/Hide Password">👁️</button>
+            </div>
+          </div>
+
+          <button type="submit" id="btn-modal-login-submit" class="btn btn-primary btn-block" style="padding:0.75rem; margin-top:0.5rem;">
+            Sign In with Credentials
+          </button>
+
+          <!-- Divider -->
+          <div style="display:flex; align-items:center; text-align:center; margin:1rem 0; color:var(--text-muted); font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">
+            <div style="flex:1; border-bottom:1px solid var(--border-color); margin-right:0.6rem;"></div>
+            OR
+            <div style="flex:1; border-bottom:1px solid var(--border-color); margin-left:0.6rem;"></div>
+          </div>
+
+          <!-- Google Sign In GIS Container -->
+          <div id="modal-google-btn-container" style="display:flex; justify-content:center; min-height:40px; margin-bottom:0.4rem;"></div>
+
+          <!-- Direct Google OAuth Fallback Button -->
+          <button type="button" id="btn-modal-google-direct" class="btn btn-secondary btn-block" style="display:flex; align-items:center; justify-content:center; gap:8px; background:#ffffff; color:#1f2937; border-color:#d1d5db; font-weight:600;" onclick="window.location.href='/api/auth/google/redirect'">
+            <img src="/google-logo.png" alt="Google" style="width:18px; height:18px;">
+            <span>Sign in with Google</span>
+          </button>
+        </form>
+
+        <!-- FORM 2: REGISTER -->
+        <form id="form-modal-register" style="display:none;" onsubmit="handleModalRegistration(event)">
+          <div class="form-group">
+            <label class="form-label" for="modal-reg-name">Full Name *</label>
+            <input type="text" id="modal-reg-name" class="form-control" placeholder="e.g. Fatima Tariq" required>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="modal-reg-userid">User ID *</label>
+              <input type="text" id="modal-reg-userid" class="form-control" placeholder="e.g. fatima" required autocomplete="username">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="modal-reg-role">Role *</label>
+              <select id="modal-reg-role" class="form-control">
+                <option value="teacher">Teacher</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modal-reg-email">Email Address *</label>
+            <input type="email" id="modal-reg-email" class="form-control" placeholder="fatima@hajar.edu" required autocomplete="email">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="modal-reg-password">Password (min 4 chars) *</label>
+            <div style="position:relative;">
+              <input type="password" id="modal-reg-password" class="form-control" placeholder="Password" minlength="4" required autocomplete="new-password" style="padding-right:2.5rem;">
+              <button type="button" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.1rem; color:var(--text-muted);" onclick="toggleModalPasswordVisibility('modal-reg-password', this)">👁️</button>
+            </div>
+          </div>
+
+          <button type="submit" id="btn-modal-reg-submit" class="btn btn-primary btn-block" style="padding:0.75rem; margin-top:0.5rem;">
+            Create Account & Sign In
+          </button>
+        </form>
+
+        <!-- Quick 1-Click Demo Logins -->
+        <div style="margin-top:1.25rem; padding:0.75rem; background:var(--bg-input); border:1px dashed var(--border-color); border-radius:var(--radius-sm);">
+          <div style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.5rem; display:flex; justify-content:space-between;">
+            <span>⚡ Quick Demo Logins</span>
+            <span style="color:var(--primary-500); font-weight:600;">1-Click</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem;">
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.78rem; text-align:left; padding:0.4rem 0.5rem; flex-direction:column; align-items:flex-start;" onclick="quickModalLogin('admin', 'admin123')">
+              <strong>🔑 Admin</strong>
+              <span style="font-size:0.7rem; color:var(--text-muted);">admin / admin123</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.78rem; text-align:left; padding:0.4rem 0.5rem; flex-direction:column; align-items:flex-start;" onclick="quickModalLogin('teacher', 'teacher123')">
+              <strong>👩‍🏫 Teacher</strong>
+              <span style="font-size:0.7rem; color:var(--text-muted);">teacher / teacher123</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
 
   <!-- Add Student Modal -->
   <div id="modal-add-student" class="modal-overlay">

@@ -44,6 +44,18 @@ const connectDB = async () => {
   const localUri = 'mongodb://127.0.0.1:27017/hajar_app';
   const rawUri = (process.env.MONGODB_URI || '').trim() || localUri;
   const primaryUri = sanitizeMongoUri(rawUri);
+  const hasPlaceholder = rawUri.includes('<db_password>') || rawUri.includes('<password>') || primaryUri.includes('%3Cdb_password%3E');
+  if (hasPlaceholder) {
+    console.log('[MongoDB] MONGODB_URI contains unconfigured placeholder <db_password>, using local database...');
+    try {
+      const localConn = await mongoose.connect(localUri, { serverSelectionTimeoutMS: 3000 });
+      console.log(`[MongoDB] Connected successfully to local database: ${localConn.connection.host}/${localConn.connection.name}`);
+      return true;
+    } catch (localErr) {
+      console.error(`[MongoDB] Local database connection failed: ${localErr.message}`);
+      return false;
+    }
+  }
 
   // 1. Attempt connection with primary URI
   try {

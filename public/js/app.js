@@ -6,12 +6,7 @@
 const state = {
   activeTab: 'attendance',
   theme: localStorage.getItem('hajar_theme') || 'dark',
-  currentUser: JSON.parse(localStorage.getItem('hajar_user')) || {
-    name: 'Admin Noorudheen',
-    email: 'admin@hajar.edu',
-    role: 'admin',
-    avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=admin@hajar.edu'
-  },
+  currentUser: JSON.parse(localStorage.getItem('hajar_user')) || null,
   classes: [],
   subjects: [],
   students: [],
@@ -38,6 +33,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Route according to URL hash
   const hash = window.location.hash.replace('#', '') || 'attendance';
   switchTab(hash);
+
+  // If user is not authenticated, prompt sign-in modal
+  if (!state.currentUser) {
+    openAuthModal('signin');
+  }
 });
 
 // ==========================================
@@ -142,7 +142,22 @@ function setupEventListeners() {
   // User badge in header
   const userBadge = document.getElementById('user-profile-badge');
   if (userBadge) {
-    userBadge.addEventListener('click', () => switchTab('settings'));
+    userBadge.addEventListener('click', () => {
+      if (!state.currentUser) {
+        openAuthModal('signin');
+      } else {
+        switchTab('settings');
+      }
+    });
+  }
+
+  // Logout button in header
+  const btnHeaderLogout = document.getElementById('btn-header-logout');
+  if (btnHeaderLogout) {
+    btnHeaderLogout.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleLogout();
+    });
   }
 
   // Attendance Form Controls
@@ -234,14 +249,20 @@ function setupEventListeners() {
   });
 }
 
-// ==========================================
-// Core Data Loading
-// ==========================================
+let cachedGoogleClientId = '';
+
+window.onGoogleLibraryLoad = function() {
+  if (cachedGoogleClientId) {
+    initGoogleSignIn(cachedGoogleClientId);
+  }
+};
+
 async function loadUserData() {
   updateUserUI();
   try {
     const config = await api.auth.getConfig();
     if (config.googleClientId) {
+      cachedGoogleClientId = config.googleClientId;
       initGoogleSignIn(config.googleClientId);
     }
   } catch (err) {
@@ -268,13 +289,54 @@ function updateUserUI() {
   const nameEl = document.getElementById('header-user-name');
   const roleEl = document.getElementById('header-user-role');
   const avatarEl = document.getElementById('header-user-avatar');
+  const logoutBtn = document.getElementById('btn-header-logout');
 
-  if (nameEl) nameEl.textContent = state.currentUser.name;
-  if (roleEl) {
-    roleEl.textContent = state.currentUser.role.toUpperCase();
-    roleEl.className = `role-pill ${state.currentUser.role}`;
+  // Settings page elements
+  const setAvatar = document.getElementById('settings-user-avatar');
+  const setName = document.getElementById('settings-user-name');
+  const setRole = document.getElementById('settings-user-role');
+  const setUserId = document.getElementById('settings-user-id');
+  const setEmail = document.getElementById('settings-user-email');
+
+  if (state.currentUser) {
+    const user = state.currentUser;
+    const displayName = user.name || 'User';
+    const displayRole = (user.role || 'teacher').toUpperCase();
+    const avatarSrc = user.avatar || (user.role === 'admin' ? '/black coat.jpeg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.email || 'user'}`);
+
+    if (nameEl) nameEl.textContent = displayName;
+    if (roleEl) {
+      roleEl.textContent = displayRole;
+      roleEl.className = `role-pill ${user.role || 'teacher'}`;
+    }
+    if (avatarEl) avatarEl.src = avatarSrc;
+    if (logoutBtn) logoutBtn.style.display = 'flex';
+
+    if (setAvatar) setAvatar.src = avatarSrc;
+    if (setName) setName.textContent = displayName;
+    if (setRole) {
+      setRole.textContent = displayRole;
+      setRole.className = `role-pill ${user.role || 'teacher'}`;
+    }
+    if (setUserId) setUserId.textContent = user.userId || user.email?.split('@')[0] || '-';
+    if (setEmail) setEmail.textContent = user.email || '-';
+  } else {
+    if (nameEl) nameEl.textContent = 'Sign In';
+    if (roleEl) {
+      roleEl.textContent = 'GUEST';
+      roleEl.className = 'role-pill teacher';
+    }
+    if (avatarEl) avatarEl.src = 'https://api.dicebear.com/7.x/bottts/svg?seed=guest';
+    if (logoutBtn) logoutBtn.style.display = 'none';
+
+    if (setName) setName.textContent = 'Not Logged In';
+    if (setRole) {
+      setRole.textContent = 'GUEST';
+      setRole.className = 'role-pill teacher';
+    }
+    if (setUserId) setUserId.textContent = 'None';
+    if (setEmail) setEmail.textContent = 'Please sign in with User ID/Password or Google';
   }
-  if (avatarEl) avatarEl.src = state.currentUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${state.currentUser.email}`;
 }
 
 function populateClassDropdowns() {
@@ -1160,7 +1222,7 @@ async function renderSettingsView() {
   }
 }
 
-// User Switching: Admin vs Teacher
+// User Switching: Admin vs Teacher (Multi-User testing)
 window.switchUserRole = async function(role) {
   try {
     const res = await api.auth.loginAs(
@@ -1171,7 +1233,7 @@ window.switchUserRole = async function(role) {
     state.currentUser = res.user;
     localStorage.setItem('hajar_user', JSON.stringify(res.user));
     updateUserUI();
-    showToast(`Logged in as ${res.user.role.toUpperCase()}: ${res.user.name}`, 'success');
+    showToast(`Switched to ${res.user.role.toUpperCase()}: ${res.user.name}`, 'success');
     renderSettingsView();
   } catch (err) {
     showToast(`Failed to switch role: ${err.message}`, 'error');
@@ -1179,26 +1241,53 @@ window.switchUserRole = async function(role) {
 };
 
 // ==========================================
-// Google Authentication Integration
+// Google Authentication Integration (GIS)
 // ==========================================
 function initGoogleSignIn(clientId) {
+  if (!clientId) return;
+  cachedGoogleClientId = clientId;
+
   if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+    // Retry in 250ms until script loaded
+    setTimeout(() => initGoogleSignIn(clientId), 250);
     return;
   }
 
-  google.accounts.id.initialize({
-    client_id: clientId,
-    callback: handleGoogleCredentialResponse
-  });
-
-  const btnContainer = document.getElementById('google-signin-btn-container');
-  if (btnContainer) {
-    google.accounts.id.renderButton(btnContainer, {
-      theme: state.theme === 'dark' ? 'filled_black' : 'outline',
-      size: 'large',
-      text: 'continue_with',
-      shape: 'pill'
+  try {
+    google.accounts.id.initialize({
+      client_id: clientId,
+      callback: handleGoogleCredentialResponse,
+      auto_select: false
     });
+
+    // Render in Settings container
+    const settingsBtnContainer = document.getElementById('google-signin-btn-container');
+    if (settingsBtnContainer) {
+      settingsBtnContainer.innerHTML = '';
+      google.accounts.id.renderButton(settingsBtnContainer, {
+        theme: state.theme === 'dark' ? 'filled_black' : 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'pill'
+      });
+    }
+
+    // Render in Login Modal container
+    const modalBtnContainer = document.getElementById('modal-google-btn-container');
+    if (modalBtnContainer) {
+      modalBtnContainer.innerHTML = '';
+      google.accounts.id.renderButton(modalBtnContainer, {
+        theme: state.theme === 'dark' ? 'filled_black' : 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'rectangular',
+        width: 360
+      });
+      const directBtn = document.getElementById('btn-modal-google-direct');
+      if (directBtn) directBtn.style.display = 'none';
+    }
+  } catch (err) {
+    console.warn('Google Identity initialization error:', err);
   }
 }
 
@@ -1210,14 +1299,216 @@ async function handleGoogleCredentialResponse(response) {
       state.currentUser = res.user;
       localStorage.setItem('hajar_user', JSON.stringify(res.user));
       updateUserUI();
-      showToast(`Welcome ${res.user.name} (${res.user.role})!`, 'success');
+      closeModal('modal-auth');
+      showToast(`Welcome ${res.user.name} (${res.user.role.toUpperCase()})!`, 'success');
       renderSettingsView();
+      await loadCoreData();
     }
   } catch (err) {
     console.error('Google auth error:', err);
     showToast(`Google Sign-In failed: ${err.message}`, 'error');
+    showModalAuthAlert(`Google Sign-In failed: ${err.message}`, 'error');
   }
 }
+
+// ==========================================
+// Authentication Modal & Credentials Access
+// ==========================================
+window.openAuthModal = function(tab = 'signin') {
+  switchModalAuthTab(tab);
+  hideModalAuthAlert();
+  openModal('modal-auth');
+
+  // If user is already logged in, show close button; otherwise require login
+  const closeBtn = document.getElementById('btn-close-auth-modal');
+  if (closeBtn) {
+    closeBtn.style.display = state.currentUser ? 'inline-flex' : 'none';
+  }
+
+  // Ensure Google button rendered
+  if (cachedGoogleClientId) {
+    initGoogleSignIn(cachedGoogleClientId);
+  }
+};
+
+window.switchModalAuthTab = function(tab) {
+  const tabSignin = document.getElementById('modal-tab-signin');
+  const tabRegister = document.getElementById('modal-tab-register');
+  const formSignin = document.getElementById('form-modal-signin');
+  const formRegister = document.getElementById('form-modal-register');
+  const modalTitle = document.getElementById('auth-modal-title');
+
+  if (tab === 'signin') {
+    if (tabSignin) { tabSignin.style.background = 'var(--primary-500)'; tabSignin.style.color = 'white'; }
+    if (tabRegister) { tabRegister.style.background = 'transparent'; tabRegister.style.color = 'var(--text-secondary)'; }
+    if (formSignin) formSignin.style.display = 'block';
+    if (formRegister) formRegister.style.display = 'none';
+    if (modalTitle) modalTitle.textContent = 'Sign In to Hajar App';
+  } else {
+    if (tabSignin) { tabSignin.style.background = 'transparent'; tabSignin.style.color = 'var(--text-secondary)'; }
+    if (tabRegister) { tabRegister.style.background = 'var(--primary-500)'; tabRegister.style.color = 'white'; }
+    if (formSignin) formSignin.style.display = 'none';
+    if (formRegister) formRegister.style.display = 'block';
+    if (modalTitle) modalTitle.textContent = 'Create New Account';
+  }
+  hideModalAuthAlert();
+};
+
+window.toggleModalPasswordVisibility = function(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁️';
+  }
+};
+
+function showModalAuthAlert(msg, type = 'error') {
+  const alertEl = document.getElementById('modal-auth-alert');
+  if (alertEl) {
+    alertEl.textContent = msg;
+    alertEl.style.display = 'block';
+    if (type === 'error') {
+      alertEl.style.background = 'var(--danger-bg)';
+      alertEl.style.color = '#fca5a5';
+      alertEl.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+    } else if (type === 'success') {
+      alertEl.style.background = 'var(--success-bg)';
+      alertEl.style.color = '#6ee7b7';
+      alertEl.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+    } else {
+      alertEl.style.background = 'var(--info-bg)';
+      alertEl.style.color = '#7dd3fc';
+      alertEl.style.border = '1px solid rgba(14, 165, 233, 0.4)';
+    }
+  }
+}
+
+function hideModalAuthAlert() {
+  const alertEl = document.getElementById('modal-auth-alert');
+  if (alertEl) {
+    alertEl.style.display = 'none';
+    alertEl.textContent = '';
+  }
+}
+
+window.handleModalPasswordLogin = async function(e) {
+  e.preventDefault();
+  const identifier = document.getElementById('modal-login-id').value.trim();
+  const password = document.getElementById('modal-login-password').value;
+  const submitBtn = document.getElementById('btn-modal-login-submit');
+
+  if (!identifier || !password) {
+    showModalAuthAlert('Please enter both User ID/Email and password.', 'error');
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Signing in...';
+  hideModalAuthAlert();
+
+  try {
+    const res = await api.auth.login(identifier, password);
+    if (!res.success || !res.user) {
+      throw new Error(res.error || 'Login failed');
+    }
+
+    state.currentUser = res.user;
+    localStorage.setItem('hajar_user', JSON.stringify(res.user));
+    updateUserUI();
+    showToast(`Welcome back, ${res.user.name} (${res.user.role.toUpperCase()})!`, 'success');
+    closeModal('modal-auth');
+    renderSettingsView();
+    await loadCoreData();
+  } catch (err) {
+    showModalAuthAlert(err.message || 'Login failed', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign In with Credentials';
+  }
+};
+
+window.handleModalRegistration = async function(e) {
+  e.preventDefault();
+  const name = document.getElementById('modal-reg-name').value.trim();
+  const userId = document.getElementById('modal-reg-userid').value.trim();
+  const role = document.getElementById('modal-reg-role').value;
+  const email = document.getElementById('modal-reg-email').value.trim();
+  const password = document.getElementById('modal-reg-password').value;
+  const submitBtn = document.getElementById('btn-modal-reg-submit');
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Creating account...';
+  hideModalAuthAlert();
+
+  try {
+    const res = await api.auth.register({ name, userId, role, email, password });
+    if (!res.success || !res.user) {
+      throw new Error(res.error || 'Registration failed');
+    }
+
+    state.currentUser = res.user;
+    localStorage.setItem('hajar_user', JSON.stringify(res.user));
+    updateUserUI();
+    showToast(`Account created! Welcome, ${res.user.name}!`, 'success');
+    closeModal('modal-auth');
+    renderSettingsView();
+    await loadCoreData();
+  } catch (err) {
+    showModalAuthAlert(err.message || 'Registration failed', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create Account & Sign In';
+  }
+};
+
+window.quickModalLogin = async function(userId, password) {
+  const submitBtn = document.getElementById('btn-modal-login-submit');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in...';
+  }
+  hideModalAuthAlert();
+
+  try {
+    const res = await api.auth.login(userId, password);
+    if (!res.success || !res.user) {
+      throw new Error(res.error || 'Demo login failed');
+    }
+
+    state.currentUser = res.user;
+    localStorage.setItem('hajar_user', JSON.stringify(res.user));
+    updateUserUI();
+    showToast(`Logged in as ${res.user.role.toUpperCase()}: ${res.user.name}`, 'success');
+    closeModal('modal-auth');
+    renderSettingsView();
+    await loadCoreData();
+  } catch (err) {
+    showModalAuthAlert(err.message || 'Demo login failed', 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Sign In with Credentials';
+    }
+  }
+};
+
+window.handleLogout = async function() {
+  try {
+    if (state.currentUser) {
+      await api.auth.logout(state.currentUser).catch(() => {});
+    }
+  } finally {
+    state.currentUser = null;
+    localStorage.removeItem('hajar_user');
+    updateUserUI();
+    showToast('You have been logged out', 'info');
+    openAuthModal('signin');
+  }
+};
 
 // ==========================================
 // Modal Form Submissions
