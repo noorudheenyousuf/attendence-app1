@@ -6,18 +6,29 @@ const { logActivity } = require('../utils/logger');
 
 const GOOGLE_CLIENT_ID = (process.env.GOOGLE_CLIENT_ID || '').trim();
 const GOOGLE_CLIENT_SECRET = (process.env.GOOGLE_CLIENT_SECRET || '').trim();
-const CLIENT_URL = (process.env.CLIENT_URL || 'http://localhost:3000').trim();
 
 const client = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
-// Initialize OAuth2 client for redirect flow if secret is provided
-const oauthRedirectClient = (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET)
-  ? new OAuth2Client(
-      GOOGLE_CLIENT_ID,
-      GOOGLE_CLIENT_SECRET,
-      `${CLIENT_URL}/api/auth/google/callback`
-    )
-  : null;
+// Helper: Dynamically determine redirect callback URL for Render or localhost
+function getCallbackUrl(req) {
+  if (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) {
+    return `${process.env.CLIENT_URL.replace(/\/$/, '')}/api/auth/google/callback`;
+  }
+  if (process.env.RENDER_EXTERNAL_URL) {
+    return `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/api/auth/google/callback`;
+  }
+  if (req) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3000';
+    return `${proto}://${host}/api/auth/google/callback`;
+  }
+  return 'http://localhost:3000/api/auth/google/callback';
+}
+
+function getOAuthRedirectClient(req) {
+  const callbackUrl = getCallbackUrl(req);
+  return new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, callbackUrl);
+}
 
 // Helper: Seed default accounts on startup
 async function seedDefaultUsers() {
@@ -327,32 +338,37 @@ router.post('/google', async (req, res) => {
 // 5. Google OAuth 2.0 Direct Redirect Flow
 // -------------------------------------------------------------
 router.get('/google/redirect', (req, res) => {
-  if (!oauthRedirectClient) {
-    return res.status(400).send('Google OAuth redirect is not fully configured (missing Client ID or Client Secret).');
+  try {
+    const oauthClient = getOAuthRedirectClient(req);
+    const authUrl = oauthClient.generateAuthUrl({
+      access_type: 'offline',
+      scope: ['profile', 'email'],
+      prompt: 'select_account'
+    });
+    res.redirect(authUrl);
+  } catch (err) {
+    console.error('Google redirect error:', err);
+    res.redirect(`/login.html?error=${encodeURIComponent(err.message)}`);
   }
-
-  const authUrl = oauthRedirectClient.generateAuthUrl({
-    access_type: 'offline',
-    scope: ['profile', 'email'],
-    prompt: 'select_account'
-  });
-
-  res.redirect(authUrl);
 });
 
 router.get('/google/callback', async (req, res) => {
   try {
-    const { code } = req.query;
-    if (!code || !oauthRedirectClient) {
+    const { code, error } = req.query;
+    if (error) {
+      return res.redirect(`/login.html?error=${encodeURIComponent('Google sign-in error: ' + error)}`);
+    }
+    if (!code) {
       return res.redirect('/login.html?error=google_auth_failed');
     }
 
-    const { tokens } = await oauthRedirectClient.getToken(code);
-    oauthRedirectClient.setCredentials(tokens);
+    const oauthClient = getOAuthRedirectClient(req);
+    const { tokens } = await oauthClient.getToken(code);
+    oauthClient.setCredentials(tokens);
 
     let payload;
     if (tokens.id_token) {
-      const ticket = await oauthRedirectClient.verifyIdToken({
+      const ticket = await oauthClient.verifyIdToken({
         idToken: tokens.id_token,
         audience: GOOGLE_CLIENT_ID
       });

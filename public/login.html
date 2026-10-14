@@ -692,10 +692,18 @@
       }
     }
 
-    // Fallback: Direct Google OAuth redirect
+    // Direct Google OAuth redirect
     function handleGoogleDirectLogin() {
-      showAlert('Redirecting to Google Sign-In...', 'info');
-      window.location.href = '/api/auth/google/redirect';
+      showAlert('Connecting to Google Sign-In...', 'info');
+      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+        google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            window.location.href = '/api/auth/google/redirect';
+          }
+        });
+      } else {
+        window.location.href = '/api/auth/google/redirect';
+      }
     }
 
     // Check URL parameters for any messages
@@ -703,7 +711,11 @@
       const urlParams = new URLSearchParams(window.location.search);
       const error = urlParams.get('error');
       if (error) {
-        showAlert(`Sign-in notice: ${decodeURIComponent(error)}`, 'error');
+        let msg = decodeURIComponent(error);
+        if (msg.includes('redirect_uri_mismatch')) {
+          msg = 'Google OAuth configuration note: Please add your Render app URL to "Authorized redirect URIs" in Google Cloud Console. In the meantime, you can log in below with User ID & Password!';
+        }
+        showAlert(msg, 'error');
       }
 
       // Initialize Google
