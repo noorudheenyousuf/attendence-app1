@@ -301,57 +301,89 @@ async function loadCoreData() {
   }
 }
 
+// function updateUserUI() {
+//   const nameEl = document.getElementById('header-user-name');
+//   const roleEl = document.getElementById('header-user-role');
+//   const avatarEl = document.getElementById('header-user-avatar');
+//   const logoutBtn = document.getElementById('btn-header-logout');
+
+//   // Settings page elements
+//   const setAvatar = document.getElementById('settings-user-avatar');
+//   const setName = document.getElementById('settings-user-name');
+//   const setRole = document.getElementById('settings-user-role');
+//   const setUserId = document.getElementById('settings-user-id');
+//   const setEmail = document.getElementById('settings-user-email');
+
+//   if (state.currentUser) {
+//     const user = state.currentUser;
+//     const displayName = user.name || 'User';
+//     const displayRole = (user.role || 'teacher').toUpperCase();
+//     const avatarSrc = user.avatar || (user.role === 'admin' ? '/black coat.jpeg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.email || 'user'}`);
+
+//     if (nameEl) nameEl.textContent = displayName;
+//     if (roleEl) {
+//       roleEl.textContent = displayRole;
+//       roleEl.className = `role-pill ${user.role || 'teacher'}`;
+//     }
+//     if (avatarEl) avatarEl.src = avatarSrc;
+//     if (logoutBtn) logoutBtn.style.display = 'flex';
+
+//     if (setAvatar) setAvatar.src = avatarSrc;
+//     if (setName) setName.textContent = displayName;
+//     if (setRole) {
+//       setRole.textContent = displayRole;
+//       setRole.className = `role-pill ${user.role || 'teacher'}`;
+//     }
+//     if (setUserId) setUserId.textContent = user.userId || user.email?.split('@')[0] || '-';
+//     if (setEmail) setEmail.textContent = user.email || '-';
+//   } else {
+//     if (nameEl) nameEl.textContent = 'Sign In';
+//     if (roleEl) {
+//       roleEl.textContent = 'GUEST';
+//       roleEl.className = 'role-pill teacher';
+//     }
+//     if (avatarEl) avatarEl.src = 'https://api.dicebear.com/7.x/bottts/svg?seed=guest';
+//     if (logoutBtn) logoutBtn.style.display = 'none';
+
+//     if (setName) setName.textContent = 'Not Logged In';
+//     if (setRole) {
+//       setRole.textContent = 'GUEST';
+//       setRole.className = 'role-pill teacher';
+//     }
+//     if (setUserId) setUserId.textContent = 'None';
+//     if (setEmail) setEmail.textContent = 'Please sign in with User ID/Password or Google';
+//   }
+// }
+
 function updateUserUI() {
-  const nameEl = document.getElementById('header-user-name');
-  const roleEl = document.getElementById('header-user-role');
   const avatarEl = document.getElementById('header-user-avatar');
   const logoutBtn = document.getElementById('btn-header-logout');
 
-  // Settings page elements
+  // സെറ്റിങ്സ് പേജിലെ ടെക്സ്റ്റ് എലമെന്റുകൾക്കായി
   const setAvatar = document.getElementById('settings-user-avatar');
   const setName = document.getElementById('settings-user-name');
   const setRole = document.getElementById('settings-user-role');
-  const setUserId = document.getElementById('settings-user-id');
-  const setEmail = document.getElementById('settings-user-email');
 
   if (state.currentUser) {
     const user = state.currentUser;
-    const displayName = user.name || 'User';
-    const displayRole = (user.role || 'teacher').toUpperCase();
     const avatarSrc = user.avatar || (user.role === 'admin' ? '/black coat.jpeg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.email || 'user'}`);
 
-    if (nameEl) nameEl.textContent = displayName;
-    if (roleEl) {
-      roleEl.textContent = displayRole;
-      roleEl.className = `role-pill ${user.role || 'teacher'}`;
-    }
+    // ഹെഡറിൽ ഫോട്ടോ മാത്രം അപ്ഡേറ്റ് ചെയ്യുന്നു (പേര് ഒഴിവാക്കി)
     if (avatarEl) avatarEl.src = avatarSrc;
     if (logoutBtn) logoutBtn.style.display = 'flex';
 
     if (setAvatar) setAvatar.src = avatarSrc;
-    if (setName) setName.textContent = displayName;
+    if (setName) setName.textContent = user.name || 'User';
     if (setRole) {
-      setRole.textContent = displayRole;
+      setRole.textContent = (user.role || 'teacher').toUpperCase();
       setRole.className = `role-pill ${user.role || 'teacher'}`;
     }
-    if (setUserId) setUserId.textContent = user.userId || user.email?.split('@')[0] || '-';
-    if (setEmail) setEmail.textContent = user.email || '-';
   } else {
-    if (nameEl) nameEl.textContent = 'Sign In';
-    if (roleEl) {
-      roleEl.textContent = 'GUEST';
-      roleEl.className = 'role-pill teacher';
-    }
     if (avatarEl) avatarEl.src = 'https://api.dicebear.com/7.x/bottts/svg?seed=guest';
     if (logoutBtn) logoutBtn.style.display = 'none';
 
+    if (setAvatar) setAvatar.src = 'https://api.dicebear.com/7.x/bottts/svg?seed=guest';
     if (setName) setName.textContent = 'Not Logged In';
-    if (setRole) {
-      setRole.textContent = 'GUEST';
-      setRole.className = 'role-pill teacher';
-    }
-    if (setUserId) setUserId.textContent = 'None';
-    if (setEmail) setEmail.textContent = 'Please sign in with User ID/Password or Google';
   }
 }
 
