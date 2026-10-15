@@ -3,7 +3,6 @@ const router = express.Router();
 const Subject = require('../models/Subject');
 const Attendance = require('../models/Attendance');
 const { logActivity } = require('../utils/logger');
-const { authenticateUser, requirePermission } = require('../middleware/authMiddleware');
 
 // GET all subjects
 router.get('/', async (req, res) => {
@@ -38,7 +37,7 @@ router.get('/by-class/:classId', async (req, res) => {
 });
 
 // CREATE subject
-router.post('/', authenticateUser, requirePermission('subjects.manage'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, code, classes, user } = req.body;
     if (!name) {
@@ -52,7 +51,7 @@ router.post('/', authenticateUser, requirePermission('subjects.manage'), async (
     });
 
     await subject.save();
-    await logActivity('SUBJECT_CREATED', `Added new subject: ${subject.name} (${subject.code || 'No code'})`, req.user || user);
+    await logActivity('SUBJECT_CREATED', `Added new subject: ${subject.name} (${subject.code || 'No code'})`, user);
 
     const populated = await Subject.findById(subject._id).populate('classes', 'name section');
     res.status(201).json(populated);
@@ -62,7 +61,7 @@ router.post('/', authenticateUser, requirePermission('subjects.manage'), async (
 });
 
 // UPDATE subject
-router.put('/:id', authenticateUser, requirePermission('subjects.manage'), async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { name, code, classes, user } = req.body;
     const subject = await Subject.findById(req.params.id);
@@ -73,7 +72,7 @@ router.put('/:id', authenticateUser, requirePermission('subjects.manage'), async
     if (Array.isArray(classes)) subject.classes = classes;
 
     await subject.save();
-    await logActivity('SUBJECT_UPDATED', `Updated subject: ${subject.name}`, req.user || user);
+    await logActivity('SUBJECT_UPDATED', `Updated subject: ${subject.name}`, user);
 
     const populated = await Subject.findById(subject._id).populate('classes', 'name section');
     res.json(populated);
@@ -83,7 +82,7 @@ router.put('/:id', authenticateUser, requirePermission('subjects.manage'), async
 });
 
 // DELETE subject
-router.delete('/:id', authenticateUser, requirePermission('subjects.manage'), async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { user } = req.body;
     const subject = await Subject.findById(req.params.id);
@@ -93,7 +92,7 @@ router.delete('/:id', authenticateUser, requirePermission('subjects.manage'), as
     await Attendance.deleteMany({ subjectId: subject._id });
 
     await Subject.findByIdAndDelete(req.params.id);
-    await logActivity('SUBJECT_DELETED', `Deleted subject: ${subject.name}`, req.user || user);
+    await logActivity('SUBJECT_DELETED', `Deleted subject: ${subject.name}`, user);
 
     res.json({ success: true, message: `Subject ${subject.name} deleted successfully` });
   } catch (err) {

@@ -71,7 +71,6 @@ class QueryChain {
     this._items = items ? [...items] : [];
     this._isSingle = isSingle;
     this._sortObj = null;
-    this._skipNum = null;
     this._limitNum = null;
     this._populates = [];
     this._store = store;
@@ -79,11 +78,6 @@ class QueryChain {
 
   sort(sortObj) {
     this._sortObj = sortObj;
-    return this;
-  }
-
-  skip(n) {
-    this._skipNum = n;
     return this;
   }
 
@@ -114,11 +108,6 @@ class QueryChain {
         if (vb instanceof Date) vb = vb.getTime();
         return dir === -1 ? (vb > va ? 1 : vb < va ? -1 : 0) : (va > vb ? 1 : va < vb ? -1 : 0);
       });
-    }
-
-    // Skipping
-    if (this._skipNum && this._skipNum > 0) {
-      result = result.slice(this._skipNum);
     }
 
     // Limiting
@@ -291,19 +280,9 @@ class InMemoryCollection {
           return this.password === candidate;
         }
       },
-      hasPermission(permission) {
-        if (this.role === 'super_admin') return true;
-        if (this.isActive === false) return false;
-        if (!this.permissions || !Array.isArray(this.permissions)) return false;
-        if (this.permissions.includes('*')) return true;
-        return this.permissions.includes(permission);
-      },
       async save() {
         if (!this._id) {
           this._id = generateId();
-        }
-        if (this.role === 'teacher') {
-          this.role = 'user';
         }
         if (this.password && !this.password.startsWith('$2a$') && !this.password.startsWith('$2b$')) {
           this.password = bcrypt.hashSync(this.password, 10);
@@ -338,20 +317,15 @@ class MemoryStore {
   seedDefaultData() {
     const adminPassHash = bcrypt.hashSync('admin123', 10);
     const teacherPassHash = bcrypt.hashSync('teacher123', 10);
-    const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'admin@hajar.edu').toLowerCase();
 
     this.users.items = [
       {
         _id: this.isDemo ? 'mem_demo_admin' : 'mem_admin_01',
         userId: 'admin',
-        name: this.isDemo ? 'Demo Super Admin Noorudheen' : 'Admin Noorudheen',
-        email: superAdminEmail,
+        name: this.isDemo ? 'Demo Admin Noorudheen' : 'Admin Noorudheen',
+        email: (process.env.ADMIN_EMAIL || 'admin@hajar.edu').toLowerCase(),
         password: adminPassHash,
-        role: 'super_admin',
-        permissions: ['*'],
-        isActive: true,
-        isEmailVerified: true,
-        isSuperAdminProtected: true,
+        role: 'admin',
         avatar: '/black coat.jpeg',
         createdAt: new Date(),
         lastLogin: new Date()
@@ -362,11 +336,7 @@ class MemoryStore {
         name: 'Teacher Fatima',
         email: 'teacher@hajar.edu',
         password: teacherPassHash,
-        role: 'user',
-        permissions: ['attendance.view', 'attendance.mark', 'classes.view', 'subjects.view', 'students.view', 'reports.view'],
-        isActive: true,
-        isEmailVerified: true,
-        isSuperAdminProtected: false,
+        role: 'teacher',
         avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=teacher@hajar.edu',
         createdAt: new Date(),
         lastLogin: new Date()

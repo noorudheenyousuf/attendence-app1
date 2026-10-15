@@ -3,7 +3,6 @@ const router = express.Router();
 const Student = require('../models/Student');
 const Attendance = require('../models/Attendance');
 const { logActivity } = require('../utils/logger');
-const { authenticateUser, requirePermission } = require('../middleware/authMiddleware');
 
 // GET all students (optional filter by classId, search query)
 router.get('/', async (req, res) => {
@@ -86,7 +85,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // CREATE student
-router.post('/', authenticateUser, requirePermission('students.manage'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, rollNo, classId, gender, parentContact, parentName, email, address, user } = req.body;
 
@@ -112,7 +111,7 @@ router.post('/', authenticateUser, requirePermission('students.manage'), async (
     });
 
     await student.save();
-    await logActivity('STUDENT_CREATED', `Added new student: ${student.name} (Roll: ${student.rollNo})`, req.user || user);
+    await logActivity('STUDENT_CREATED', `Added new student: ${student.name} (Roll: ${student.rollNo})`, user);
 
     const populated = await Student.findById(student._id).populate('classId', 'name section academicYear');
     res.status(201).json(populated);
@@ -122,7 +121,7 @@ router.post('/', authenticateUser, requirePermission('students.manage'), async (
 });
 
 // UPDATE student
-router.put('/:id', authenticateUser, requirePermission('students.manage'), async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { name, rollNo, classId, gender, parentContact, parentName, email, address, user } = req.body;
     const student = await Student.findById(req.params.id);
@@ -150,7 +149,7 @@ router.put('/:id', authenticateUser, requirePermission('students.manage'), async
     if (address !== undefined) student.address = address.trim();
 
     await student.save();
-    await logActivity('STUDENT_UPDATED', `Updated student details: ${student.name}`, req.user || user);
+    await logActivity('STUDENT_UPDATED', `Updated student details: ${student.name}`, user);
 
     const populated = await Student.findById(student._id).populate('classId', 'name section academicYear');
     res.json(populated);
@@ -160,7 +159,7 @@ router.put('/:id', authenticateUser, requirePermission('students.manage'), async
 });
 
 // DELETE student
-router.delete('/:id', authenticateUser, requirePermission('students.manage'), async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { user } = req.body;
     const student = await Student.findById(req.params.id);
@@ -175,7 +174,7 @@ router.delete('/:id', authenticateUser, requirePermission('students.manage'), as
       { $pull: { records: { studentId: student._id } } }
     );
 
-    await logActivity('STUDENT_DELETED', `Deleted student: ${student.name} (Roll: ${student.rollNo})`, req.user || user);
+    await logActivity('STUDENT_DELETED', `Deleted student: ${student.name} (Roll: ${student.rollNo})`, user);
     res.json({ success: true, message: `Student ${student.name} deleted successfully` });
   } catch (err) {
     res.status(500).json({ error: err.message });

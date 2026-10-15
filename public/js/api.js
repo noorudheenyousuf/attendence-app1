@@ -9,23 +9,13 @@ async function request(endpoint, options = {}) {
   
   // Resolve current active environment (real vs demo)
   const currentEnv = (window.state && window.state.environment) || localStorage.getItem('hajar_env') || 'real';
-  const authToken = localStorage.getItem('hajar_token');
-  const currentUser = (window.state && window.state.currentUser) || JSON.parse(localStorage.getItem('hajar_user') || 'null');
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'X-Environment': currentEnv,
-    ...options.headers
-  };
-
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  } else if (currentUser && (currentUser.id || currentUser._id)) {
-    headers['X-User-Id'] = (currentUser.id || currentUser._id).toString();
-  }
 
   const config = {
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Environment': currentEnv,
+      ...options.headers
+    },
     ...options
   };
 
@@ -115,7 +105,7 @@ const api = {
     seedSample: (user, options = {}) => 
       request('/settings/seed-sample', { method: 'POST', body: { user, ...options } }),
 
-    // Backups & Disaster Recovery
+    // Backups & Disaster Recovery (Requirements 1, 3)
     getBackups: () => request('/settings/backups'),
     createBackup: (name, user) => 
       request('/settings/backups', { method: 'POST', body: { name, user } }),
@@ -129,42 +119,17 @@ const api = {
       request(`/settings/backups/${id}`, { method: 'DELETE' })
   },
 
-  // Admin & Permission Management (Core Objectives 2, 4, 6)
-  admin: {
-    getPermissions: () => request('/admin/permissions'),
-    getUsers: (params = {}) => {
-      const q = new URLSearchParams(params).toString();
-      return request(`/admin/users${q ? `?${q}` : ''}`);
-    },
-    getUser: (id) => request(`/admin/users/${id}`),
-    promoteUser: (id, permissions = []) => 
-      request(`/admin/users/${id}/promote`, { method: 'POST', body: { permissions } }),
-    demoteUser: (id) => 
-      request(`/admin/users/${id}/demote`, { method: 'POST' }),
-    updatePermissions: (id, permissions) => 
-      request(`/admin/users/${id}/permissions`, { method: 'PATCH', body: { permissions } }),
-    updateStatus: (id, isActive) => 
-      request(`/admin/users/${id}/status`, { method: 'PATCH', body: { isActive } }),
-    deleteUser: (id) => 
-      request(`/admin/users/${id}`, { method: 'DELETE' }),
-    getAuditLogs: (page = 1, limit = 30) => 
-      request(`/admin/audit-logs?page=${page}&limit=${limit}`)
-  },
-
   // Auth & Roles
   auth: {
     getConfig: () => request('/auth/config'),
-    getMe: () => request('/auth/me'),
     login: (identifier, password) => 
       request('/auth/login', { method: 'POST', body: { identifier, password } }),
     register: (userData) => 
       request('/auth/register', { method: 'POST', body: userData }),
     verifyGoogle: (credential, client_id) => 
       request('/auth/google', { method: 'POST', body: { credential, client_id } }),
-    loginAs: (role) => 
-      request('/auth/login-as', { method: 'POST', body: { role } }),
-    initSuperAdmin: (email, password, setupKey) => 
-      request('/auth/init-super-admin', { method: 'POST', body: { email, password, setupKey } }),
+    loginAs: (role, name, email) => 
+      request('/auth/login-as', { method: 'POST', body: { role, name, email } }),
     logout: (user) => 
       request('/auth/logout', { method: 'POST', body: { user } })
   }

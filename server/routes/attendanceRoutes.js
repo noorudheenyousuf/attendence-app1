@@ -5,7 +5,6 @@ const Student = require('../models/Student');
 const Class = require('../models/Class');
 const Subject = require('../models/Subject');
 const { logActivity } = require('../utils/logger');
-const { authenticateUser, requirePermission } = require('../middleware/authMiddleware');
 
 // GET attendance session for a specific date, class, and subject
 router.get('/session', async (req, res) => {
@@ -93,7 +92,7 @@ router.get('/session', async (req, res) => {
 });
 
 // POST / Save or Update attendance session
-router.post('/', authenticateUser, requirePermission('attendance.mark'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { date, classId, subjectId, records, user } = req.body;
 
@@ -131,7 +130,7 @@ router.post('/', authenticateUser, requirePermission('attendance.mark'), async (
 
     const className = clsDoc ? `${clsDoc.name} ${clsDoc.section}` : 'Class';
     const subjectName = subjDoc ? subjDoc.name : 'Subject';
-    const userName = (req.user && req.user.name) || (user && user.name) ? (req.user ? req.user.name : user.name) : 'Teacher';
+    const userName = (user && user.name) ? user.name : 'Teacher';
 
     // Check if updating or creating
     const isUpdate = await Attendance.exists({ date, classId, subjectId });
@@ -158,7 +157,7 @@ router.post('/', authenticateUser, requirePermission('attendance.mark'), async (
     const actionType = isUpdate ? 'ATTENDANCE_UPDATED' : 'ATTENDANCE_MARKED';
     const actionDesc = `${isUpdate ? 'Updated' : 'Marked'} attendance for ${className} - ${subjectName} on ${date} (${presentCount}/${totalStudents} Present)`;
 
-    await logActivity(actionType, actionDesc, req.user || user, {
+    await logActivity(actionType, actionDesc, user, {
       date,
       classId,
       subjectId,
@@ -192,7 +191,7 @@ router.get('/recent', async (req, res) => {
 });
 
 // DELETE single session
-router.delete('/:id', authenticateUser, requirePermission('attendance.clear'), async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { user } = req.body;
     const session = await Attendance.findById(req.params.id)
@@ -202,7 +201,7 @@ router.delete('/:id', authenticateUser, requirePermission('attendance.clear'), a
     if (!session) return res.status(404).json({ error: 'Session not found' });
 
     await Attendance.findByIdAndDelete(req.params.id);
-    await logActivity('ATTENDANCE_DELETED', `Deleted attendance session for ${session.date}`, req.user || user);
+    await logActivity('ATTENDANCE_DELETED', `Deleted attendance session for ${session.date}`, user);
 
     res.json({ success: true, message: 'Attendance session deleted' });
   } catch (err) {

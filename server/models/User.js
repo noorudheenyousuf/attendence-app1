@@ -34,24 +34,8 @@ const userSchema = new mongoose.Schema({
   },
   role: { 
     type: String, 
-    enum: ['user', 'admin', 'super_admin'], 
-    default: 'user' 
-  },
-  permissions: {
-    type: [String],
-    default: []
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  isEmailVerified: {
-    type: Boolean,
-    default: false
-  },
-  isSuperAdminProtected: {
-    type: Boolean,
-    default: false
+    enum: ['admin', 'teacher'], 
+    default: 'teacher' 
   },
   createdAt: { 
     type: Date, 
@@ -63,20 +47,13 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Pre-save hook to hash password if modified and normalize role
+// Pre-save hook to hash password if modified
 userSchema.pre('save', async function() {
-  // Normalize legacy 'teacher' role to 'user'
-  if (this.role === 'teacher') {
-    this.role = 'user';
-  }
-
-  // Hash password if modified
-  if (this.isModified('password') && this.password) {
-    if (!this.password.startsWith('$2a$') && !this.password.startsWith('$2b$')) {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
-    }
-  }
+  if (!this.isModified('password') || !this.password) return;
+  // If already hashed (starts with $2a$ or $2b$), skip re-hashing
+  if (this.password.startsWith('$2a$') || this.password.startsWith('$2b$')) return;
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Compare password helper
@@ -85,18 +62,9 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Check if user has a specific permission
-userSchema.methods.hasPermission = function(permission) {
-  if (this.role === 'super_admin') return true;
-  if (!this.isActive) return false;
-  if (!this.permissions || !Array.isArray(this.permissions)) return false;
-  if (this.permissions.includes('*')) return true;
-  return this.permissions.includes(permission);
-};
-
 // Remove sensitive fields when converting to JSON
 userSchema.methods.toJSON = function() {
-  const obj = this.toObject ? this.toObject() : { ...this };
+  const obj = this.toObject();
   delete obj.password;
   return obj;
 };
